@@ -111,13 +111,13 @@ contract WellNftArtIssuer is ERC721Full {
 
         /** checks if the art name/alias added has not been addded before */
         require(!_ArtAdded[_ArtAlias], 'this art has been added with an art name into this array list');
-
+       
+       /** uppates the mapping to show that art name/alias was added  */
+        _ArtAdded[_ArtAlias] = true;
 
         /** push art name into the array, totalNumberOfArtPresent updates the number of art present by counting the number of times an alias/name  push was sucessful  */
         totalNumberOfArtPresent = ART.push(_ArtAlias);
 
-        /** uppates the mapping to show that art name/alias was added  */
-        _ArtAdded[_ArtAlias] = true;
     }
 
 
