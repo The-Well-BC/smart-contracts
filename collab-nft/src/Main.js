@@ -52,7 +52,7 @@ class Main extends Component {
         }
  
         return (
-            <div className=' card 'style = {{position: 'absolute', top: '70px'}}>
+            <div className='card'>
                 <div className='card-body' style = {{padding: '3px'}}>
                         <button  onClick={(event) => { this.setState({ sellingArt: 'false', StakeBgColor: 'lightgrey', WithdrawBgColor: 'white' }) }} style={{ backgroundColor: this.state.StakeBgColor }} >
                          <h6 style = {{fontSize: '1.8vw'}}> buy nft</h6>

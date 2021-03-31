@@ -6,11 +6,7 @@ import ipfs from './ipfs';
 
 import Collaborators from "./collaborators";
 
-
-
-
 class Sell extends Component {
-
     constructor(props) {
         super(props)
         this.state = {
@@ -28,17 +24,8 @@ class Sell extends Component {
             IFPSHASH: '',
             buffer: '',
             AddCollaborators: false 
-
         }
     }
-
-
-
-
-
-
-
-
 
     render() { 
         let content 
@@ -48,17 +35,11 @@ class Sell extends Component {
             updatePercentageRewardForCollaborators = {this.props.updatePercentageRewardForCollaborators}/>
         } else {}
 
-    
-
-
         return (
             <div>
-
-
                 <div className='card'>
-                    <div className='cardbody' className='card' style={{ position: 'absolute', top: '-50px', right: '480px', color: 'black', padding: '10px' }}>
+                    <div className='cardbody card' style={{ position: 'absolute', top: '-50px', right: '480px', color: 'black', padding: '10px' }}>
                         <p>click button below to deploy smart contract </p>
-
 
                         <form onSubmit={(event) => {
                             event.preventDefault()
@@ -115,7 +96,7 @@ class Sell extends Component {
                             event.preventDefault()
                             window.web3 = new Web3(window.ethereum)
                             window.ethereum.enable()
-                            const web3 = window.web3
+                            // const web3 = window.web3
 
                             ipfs.files.add(this.state.buffer, (error, result) => {
                                 if (error) {
@@ -167,8 +148,7 @@ class Sell extends Component {
 
                             window.web3 = new Web3(window.ethereum)
                             window.ethereum.enable()
-                            const web3 = window.web3
-                    
+                            // const web3 = window.web3
 
                             let ArtPrice = this.state.NewArtPrice
                             this.props.ChangeArtPrice(ArtPrice)
@@ -205,7 +185,6 @@ class Sell extends Component {
 
             </div>
         )
-
     }
 }
 

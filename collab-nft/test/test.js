@@ -1,4 +1,6 @@
-const { assert } = require("console");
+// const { assert } = require("console");
+const chai = require('chai');
+const { expect } = chai;
 const { isMainThread } = require("worker_threads");
 
 const TemplateNFTMintContract = artifacts.require('collabNFT');
@@ -21,27 +23,28 @@ contract('collabNFT', function (accounts) {
         collabNFTAddress = collabNFT.address;
     });
 
-    describe('add art to  smart contract', async () => {
+    describe('Add new art', () => {
         it('should add a new art name to the smart contract list', async () => {
             // call addART function in smart contract to add new art to smart contract by its name 
-            await collabNFT.addART(artName1, '{placeholder for ipfs hash}');
+            return collabNFT.addART(artName1, '{placeholder for ipfs hash}')
+            .then(() => {
+                // get total number of art names present, art that can be minted 
+                return collabNFT.totalNumberOfArtPresent()
+                .then(numArtAdded => {
+                    // assert that etNumeberOfArtsAdded is equal to 1 right now as we have only added one name 
+                    console.log('Checking Contructor name is equal to BN:', (numArtAdded.constructor && numArtAdded.constructor.name === 'BN'));
+                    expect(numArtAdded.toString()).to.be.equal('1');
 
-            // get total number of art names present, art that can be minted 
-            const getNumeberOfArtsAdded = await collabNFT.totalNumberOfArtPresent();
+                    // get added art name by calling it by its array list position/index
+                    return collabNFT.ART(0)
+                })
+                .then( AddedArtName => {
+                    // assert that added art name is present 
+                    expect(AddedArtName).to.equal(artName1);
+                });
+            })
+        });
 
-            // assert that etNumeberOfArtsAdded is equal to 1 right now as we have only added one name 
-            assert(getNumeberOfArtsAdded === 1)
-
-            // get added art name by calling it by its array list position/index
-            const AddedArtName = await collabNFT.ART(0);
-
-
-            // assert that added art name is present 
-            assert(AddedArtName === artName1);
-
-        })
-    })
-    describe('get art alias/name added to the smart contract by Art ID', async () => {
         it('should get art name by ID', async () => {
 
             // art id is 1 since we've added only one artname which is he first and only art added 
@@ -51,11 +54,12 @@ contract('collabNFT', function (accounts) {
             ArtNameAdded = await collabNFT.getArtAliasByID(ArtID);
 
             // assert that art name1 is the same as ArtNameAdded just gotten above
-            assert(artName1 === ArtNameAdded, 'artname isnt added');
+            expect(artName1, 'artname isnt added').to.equal(ArtNameAdded)
         })
-    })
-    describe('change art price', async () => {
-        it('artist should be able to change art price', async () => {
+    });
+
+    describe('Change art price', async () => {
+        it('Artist should be able to change art price', async () => {
             //initialiaze a new art price for which one nft token will sell 
             NewArtPrice = await web3.utils.toWei('0.08', "ether");
 
@@ -69,57 +73,41 @@ contract('collabNFT', function (accounts) {
             const newupdatedprice = await collabNFT.priceInEth();
 
             /// assert that new art price is not the same as the priceInEth(old price)
-            assert(NewArtPrice !== priceInEth, 'new art price and old price in eth must not be the same thing');
-            assert(newupdatedprice.toString() === NewArtPrice, 'new updated price is not the same as new art price');
+            expect(NewArtPrice, 'new art price and old price in eth must not be the same thing').to.not.equal(priceInEth);
+            expect(newupdatedprice.toString(), 'new updated price is not the same as new art price').to.equal(NewArtPrice);
         })
     })
 
-    describe('AddCollaboratorsAndTheirRewardPercentage', async () => {
+    describe('Manage Collaborators', async () => {
         it('add new collaborators by their address and state their cut from the sale', async () => {
-
             collaborator1 = accounts[8];
             const collaborator1Percentage = '10';
-
 
             await collabNFT.AddCollaboratorsAndTheirRewardPercentage(collaborator1, collaborator1Percentage, { from: accounts[0] });
 
             /// call the getCollaboratorByID  smart contract function to get the address of the newly added collaborator. Collaborator addresss is tracked by virtue of when it was added. If collaborator address added first, it is nmber 1 hence put 1 as argument into the function
             const addedaddress = await collabNFT.getCollaboratorByID(1);
 
-
             /// assert that newly added address the same as the collaborator 1
-            assert(addedaddress === collaborator1, 'collaborator not added or collaborattor address and address in collaborator array not the same thing');
-
+            expect(addedaddress, 'collaborator not added or collaborattor address and address in collaborator array not the same thing').to.equal(collaborator1);
         })
-    })
 
-    describe('updatePercentageRewardForCollaborators', async () => {
         it('update percentage reward for collaborator', async () => {
-
-          
             const collaborator1Percentage = '10';
-            const newcollaborator1Percentage = '20';
-                collaborator1 = accounts[8]
-
-
+            const newcollaborator1Percentage = '20',
+                    collaborator1 = accounts[8]
 
             await collabNFT.updatePercentageRewardForCollaborators(collaborator1, newcollaborator1Percentage, { from: accounts[0] });
 
             let newPercentage = await collabNFT.getCollaboratorCut(collaborator1);
 
-            assert(newPercentage.toString() !== collaborator1Percentage, 'percentage cut not updated');
-            assert(newPercentage.toString() === newcollaborator1Percentage, 'percentage cut is not updated');
-
-
+            expect(newPercentage.toString(), 'percentage cut not updated').to.not.equal(collaborator1Percentage);
+            expect(newPercentage.toString(), 'percentage cut is not updated').to.equal(newcollaborator1Percentage);
         })
-    })
+    });
 
-
-
-    describe('receive eth, mint art nft token to the eth sender ', async () => {
+    describe('Receiving ETH, Minting nft, Sending minted NFT to eth sender ', async () => {
         it('should send nft token of specified art to the eth sender upon receipt of eth', async () => {
-
-
             const tokenURI = 'localhost: http://127.0.0.1:5500/'
             //call the ReceiveEthAndMint function in the smart contract
             await collabNFT.ReceiveEthAndMint(ArtID, tokenURI, NewArtPrice, { from: accounts[6], value: NewArtPrice });
@@ -128,12 +116,12 @@ contract('collabNFT', function (accounts) {
             const tokenbalOfEthSender = await collabNFT.balanceOf(accounts[6])
             const nftartowner = await collabNFT.ownerOf(ArtID);
 
-            assert(nftartowner === accounts[6], ' address function calling is not the owner of token');
-            assert(tokenbalOfEthSender.toNumber() === 1, 'token bal of eth sender is not 1');
+            expect(nftartowner, ' address function calling is not the owner of token').to.equal(accounts[6]);
+            expect(tokenbalOfEthSender.toNumber(), 'token bal of eth sender is not 1').to.equal(1);
 
             const artistETHBAL = web3.eth.getBalance( artist, function (err, result) {
                 if (err) {
-                    console.log(err)
+                    console.error('Error:', err)
                 } else {
                     console.log(web3.utils.fromWei(result, "ether") + " ETH")
                 }
@@ -141,16 +129,11 @@ contract('collabNFT', function (accounts) {
 
             const collaboratorEthBal = web3.eth.getBalance( collaborator1, function(err, result) {
                 if (err) {
-                  console.log(err)
+                  console.error('Error:', err)
                 } else {
                   console.log(web3.utils.fromWei(result, "ether") + " ETH")
                 }
             })
-
-
-
         })
     })
-
-
 })
