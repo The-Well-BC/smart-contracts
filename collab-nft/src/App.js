@@ -7,20 +7,17 @@ import Main from "./Main";
 import Web3 from 'web3';
 
 class App extends Component {
-
-
-
-
   loadEverything = async () => {
-
     await this.loadWeb3()
     await this.loadBlockchainData()
   }
+
   async loadWeb3() {
     if (window.ethereum) {
 
-      window.web3 = new Web3(window.ethereum)
-      await window.ethereum.enable()
+      // window.web3 = new Web3(window.ethereum)
+     return window.ethereum.enable()
+    .then(() => {
       const web3 = window.web3
 
       this.setState({ web3: web3 })
@@ -56,7 +53,9 @@ class App extends Component {
     else {
       window.alert('Non-Ethereum browser detected. Please install metamask chrome extension and refresh page')
     }
+    });
   }
+
   async loadBlockchainData() {
 
     const web3 = window.web3
@@ -87,9 +86,8 @@ class App extends Component {
 
 
     } else { }
-
-
   }
+
   updatetokenBal = () => {
 
 
