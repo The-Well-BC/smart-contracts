@@ -43,7 +43,7 @@ contract collabNFT is ERC721Full {
     mapping(string => bool) _URI_Exists;
     mapping(address => uint256) balances;
     mapping(address => bool) collaboratorAdded;
-    mapping(address => uint256) collaboratorRewards;
+    mapping (address => uint256)  public collaboratorRewards;
 
     /* Safemath library is used for uint to prevent integer overflow during mathematical calculations */
     using SafeMath for uint;
@@ -244,5 +244,9 @@ contract collabNFT is ERC721Full {
 
         /** updates mapping of collaborating artist address to percentage reward for the collab artist  */
         collaboratorRewards[collaborating_Artist] = percentageReward;
+    }
+
+    function getCollaboratorCut( address _collaborator) public view returns(uint){
+        return collaboratorRewards[_collaborator];
     }
 }
