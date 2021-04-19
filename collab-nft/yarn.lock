@@ -1236,22 +1236,6 @@
     "minimatch" "^3.0.4"
     "strip-json-comments" "^3.1.1"
 
-"@ethereumjs/common@^2.2.0":
-  "integrity" "sha512-PyQiTG00MJtBRkJmv46ChZL8u2XWxNBeAthznAUIUiefxPAXjbkuiCZOuncgJS34/XkMbNc9zMt/PlgKRBElig=="
-  "resolved" "https://registry.npmjs.org/@ethereumjs/common/-/common-2.2.0.tgz"
-  "version" "2.2.0"
-  dependencies:
-    "crc-32" "^1.2.0"
-    "ethereumjs-util" "^7.0.9"
-
-"@ethereumjs/tx@^3.0.2":
-  "integrity" "sha512-IuN9EUT6sCZrldVbgQA+XuuxouUvMdoW34qZvlzFtCgjlvKJ848iK/lDTJVVPNb3WndlEu3d2a7Mu474ggdT/g=="
-  "resolved" "https://registry.npmjs.org/@ethereumjs/tx/-/tx-3.1.1.tgz"
-  "version" "3.1.1"
-  dependencies:
-    "@ethereumjs/common" "^2.2.0"
-    "ethereumjs-util" "^7.0.9"
-
 "@ethersproject/abi@5.0.7":
   "integrity" "sha512-Cqktk+hSIckwP/W8O47Eef60VwmoSC/L3lY0+dIBhQPCNn9E4V7rwmm2aFrNRRDJfFlGuZ1khkQUOc3oBX+niw=="
   "resolved" "https://registry.npmjs.org/@ethersproject/abi/-/abi-5.0.7.tgz"
@@ -1912,19 +1896,20 @@
   dependencies:
     "@babel/runtime" "^7.12.5"
 
-"@truffle/hdwallet-provider@^1.2.2":
-  "integrity" "sha512-wEtUunnQ+eby/6Rlgo6mDqFOJtE+gs8GZL8oR/XaoOMEMv5WDLqSFpjZRLIOVVyzz9wtoBIZLqxUprxCv2DrTw=="
-  "resolved" "https://registry.npmjs.org/@truffle/hdwallet-provider/-/hdwallet-provider-1.2.5.tgz"
-  "version" "1.2.5"
+"@truffle/hdwallet-provider@1.2.2":
+  "integrity" "sha512-gpE5M9c+G7uMR9Nn2xslY0BRdl8hvlrHxBJ451g/V3WnOI5rDQMXezz6VZMn3zvWDiQTPRknx1uUDfWvMuQwqg=="
+  "resolved" "https://registry.npmjs.org/@truffle/hdwallet-provider/-/hdwallet-provider-1.2.2.tgz"
+  "version" "1.2.2"
   dependencies:
-    "@ethereumjs/tx" "^3.0.2"
     "@trufflesuite/web3-provider-engine" "15.0.13-1"
     "any-promise" "^1.3.0"
     "bindings" "^1.5.0"
     "ethereum-cryptography" "^0.1.3"
     "ethereum-protocol" "^1.0.1"
+    "ethereumjs-tx" "^1.0.0"
     "ethereumjs-util" "^6.1.0"
     "ethereumjs-wallet" "^1.0.1"
+    "source-map-support" "^0.5.19"
 
 "@trufflesuite/eth-json-rpc-filters@^4.1.2-1":
   "integrity" "sha512-/MChvC5dw2ck9NU1cZmdovCz2VKbOeIyR4tcxDvA5sT+NaL0rA2/R5U0yI7zsbo1zD+pgqav77rQHTzpUdDNJQ=="
@@ -2051,13 +2036,6 @@
   "integrity" "sha512-pqr857jrp2kPuO9uRjZ3PwnJTjoQy+fcdxvBTvHm6dkmEL9q+hDD/2j/0ELOBPtPnS8LjCX0gI9nbl8lVkadpg=="
   "resolved" "https://registry.npmjs.org/@types/bn.js/-/bn.js-4.11.6.tgz"
   "version" "4.11.6"
-  dependencies:
-    "@types/node" "*"
-
-"@types/bn.js@^5.1.0":
-  "integrity" "sha512-QSSVYj7pYFN49kW77o2s9xTCwZ8F2xLbjLLSEVh8D2F4JUhZtPAGOFLTD+ffqksBx/u4cE/KImFjyhqCjn/LIA=="
-  "resolved" "https://registry.npmjs.org/@types/bn.js/-/bn.js-5.1.0.tgz"
-  "version" "5.1.0"
   dependencies:
     "@types/node" "*"
 
@@ -4419,14 +4397,6 @@
     "path-type" "^4.0.0"
     "yaml" "^1.10.0"
 
-"crc-32@^1.2.0":
-  "integrity" "sha512-1uBwHxF+Y/4yF5G48fwnKq6QsIXheor3ZLPT80yGBV1oEUwpPojlEhQbWKVw1VwcTQyMGHK1/XMmTjmlsmTTGA=="
-  "resolved" "https://registry.npmjs.org/crc-32/-/crc-32-1.2.0.tgz"
-  "version" "1.2.0"
-  dependencies:
-    "exit-on-epipe" "~1.0.1"
-    "printj" "~1.1.0"
-
 "create-ecdh@^4.0.0":
   "integrity" "sha512-mf+TCx8wWc9VpuxfP2ht0iSISLZnt0JgWlrOKZiNqyUZWnjIaCIVNQArMHnCZKfEYRg6IM7A+NeJoN8gf/Ws0A=="
   "resolved" "https://registry.yarnpkg.com/create-ecdh/-/create-ecdh-4.0.4.tgz"
@@ -5820,7 +5790,7 @@
   "resolved" "https://registry.npmjs.org/ethereumjs-common/-/ethereumjs-common-1.5.2.tgz"
   "version" "1.5.2"
 
-"ethereumjs-tx@^1.2.0", "ethereumjs-tx@^1.2.2", "ethereumjs-tx@^1.3.7":
+"ethereumjs-tx@^1.0.0", "ethereumjs-tx@^1.2.0", "ethereumjs-tx@^1.2.2", "ethereumjs-tx@^1.3.7":
   "integrity" "sha512-wvLMxzt1RPhAQ9Yi3/HKZTn0FZYpnsmQdbKYfUUpi4j1SEIcbkd9tndVjcPrufY3V7j2IebOpC00Zp2P/Ay2kA=="
   "resolved" "https://registry.npmjs.org/ethereumjs-tx/-/ethereumjs-tx-1.3.7.tgz"
   "version" "1.3.7"
@@ -5907,18 +5877,6 @@
   "version" "7.0.8"
   dependencies:
     "@types/bn.js" "^4.11.3"
-    "bn.js" "^5.1.2"
-    "create-hash" "^1.1.2"
-    "ethereum-cryptography" "^0.1.3"
-    "ethjs-util" "0.1.6"
-    "rlp" "^2.2.4"
-
-"ethereumjs-util@^7.0.9":
-  "integrity" "sha512-cRqvYYKJoitq6vMKMf8pXeVwvTrX+dRD0JwHaYqm8jvogK14tqIoCWH/KUHcRwnVxVXEYF/o6pup5jRG4V0xzg=="
-  "resolved" "https://registry.npmjs.org/ethereumjs-util/-/ethereumjs-util-7.0.9.tgz"
-  "version" "7.0.9"
-  dependencies:
-    "@types/bn.js" "^5.1.0"
     "bn.js" "^5.1.2"
     "create-hash" "^1.1.2"
     "ethereum-cryptography" "^0.1.3"
@@ -6034,11 +5992,6 @@
     "onetime" "^5.1.0"
     "signal-exit" "^3.0.2"
     "strip-final-newline" "^2.0.0"
-
-"exit-on-epipe@~1.0.1":
-  "integrity" "sha512-h2z5mrROTxce56S+pnvAV890uu7ls7f1kEvVGJbw1OlFH3/mlJ5bkXu0KRyW94v37zzHPiUd55iLn3DA7TjWpw=="
-  "resolved" "https://registry.npmjs.org/exit-on-epipe/-/exit-on-epipe-1.0.1.tgz"
-  "version" "1.0.1"
 
 "exit@^0.1.2":
   "integrity" "sha1-BjJjj42HfMghB9MKD/8aF8uhzQw="
@@ -11166,11 +11119,6 @@
     "ansi-styles" "^4.0.0"
     "react-is" "^17.0.1"
 
-"printj@~1.1.0":
-  "integrity" "sha512-zA2SmoLaxZyArQTOPj5LXecR+RagfPSU5Kw1qP+jkWeNlrq+eJZyY2oS68SU1Z/7/myXM4lo9716laOFAVStCQ=="
-  "resolved" "https://registry.npmjs.org/printj/-/printj-1.1.2.tgz"
-  "version" "1.1.2"
-
 "process-nextick-args@~2.0.0":
   "integrity" "sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag=="
   "resolved" "https://registry.yarnpkg.com/process-nextick-args/-/process-nextick-args-2.0.1.tgz"
@@ -12679,7 +12627,7 @@
     "atob" "^2.1.2"
     "decode-uri-component" "^0.2.0"
 
-"source-map-support@^0.5.6", "source-map-support@~0.5.12", "source-map-support@~0.5.19":
+"source-map-support@^0.5.19", "source-map-support@^0.5.6", "source-map-support@~0.5.12", "source-map-support@~0.5.19":
   "integrity" "sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw=="
   "resolved" "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.19.tgz"
   "version" "0.5.19"
