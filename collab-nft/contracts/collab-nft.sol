@@ -138,7 +138,7 @@ contract CollabNFT is ERC721Full {
 
     function setCollaborators(
         address payable[] memory _collaborators,
-        uint8[] memory _rewardPercentage
+        uint8[] memory _rewardPercentages
     ) public returns(uint) {
         /** checks if the function caller is the artist  */
         require(
@@ -150,8 +150,24 @@ contract CollabNFT is ERC721Full {
             'NFT can only have up to 10 collaborators'
         );
         require(
-            _rewardPercentage.length == _collaborators.length,
+            _rewardPercentages.length == _collaborators.length,
             'Length of collaborators array should equal length of percentage rewards'
+        );
+
+        if(_collaborators.length == 0) {
+            require(
+                artist.rewardPercentage == 100,
+                'Artist percentage should be 100% if there are no collaborators'
+            );
+        }
+
+        uint8 sumRewardPercentages = artist.rewardPercentage; // Total reward percentages includes artist/creator cut.
+        for (uint8 i = 0; i < _rewardPercentages.length; i++) {
+            sumRewardPercentages += _rewardPercentages[i];
+        }
+        require(
+            sumRewardPercentages == 100,
+            "Total of artist cut + collaborators' cuts must add up to 100"
         );
 
         /** Resetting collaborators array */
@@ -160,7 +176,7 @@ contract CollabNFT is ERC721Full {
         for (uint8 i = 0; i < _collaborators.length; i++) {
             /** collaborators[i] = Collaborator(_collaborators[i], _rewardPercentage[i], 0); */
             collaborators.push(
-                Collaborator(_collaborators[i], _rewardPercentage[i], 0)
+                Collaborator(_collaborators[i], _rewardPercentages[i], 0)
             );
         }
 
