@@ -154,16 +154,14 @@ contract CollabNFT is ERC721Full {
             'Length of collaborators array should equal length of percentage rewards'
         );
 
-        /** Resetting collaborators array
-        delete collaborators;
-        */
+        /** Resetting collaborators array */
         delete collaborators;
 
         for (uint8 i = 0; i < _collaborators.length; i++) {
             /** collaborators[i] = Collaborator(_collaborators[i], _rewardPercentage[i], 0); */
             collaborators.push(
                 Collaborator(_collaborators[i], _rewardPercentage[i], 0)
-             );
+            );
         }
 
         /** totalCollaborators = _collaborators.length; */
@@ -185,10 +183,6 @@ contract CollabNFT is ERC721Full {
                 );
                 addrs[i] = collaborators[i]._address;
                 rewardPercentages[i] = collaborators[i].rewardPercentage;
-                /*
-                addrs[i] = collaborators[i]._address;
-                rewardPercentages[i] = collaborators[i].rewardPercentage;
-                */
             }
 
             return (addrs, rewardPercentages);
