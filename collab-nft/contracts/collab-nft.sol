@@ -1,40 +1,45 @@
 pragma solidity 0.5.0;
-
 import "./ERC721Full.sol";
 
- 
 
 /* smart contract that mints ntf to addresses that interact with it  */
-
-contract collabNFT is ERC721Full {
-    /* 'name' is the name of the token the contract issues */
+contract CollabNFT is ERC721Full {
     string public name;
-
-    /* 'symbol' is the token symbol */
     string public symbol;
-
-    /* 'artist' is the entity who is the  MAIN creator of the art the nft represents. Artist is identified by an eth address*/
-    address payable public artist;
 
     /* 'priceInEth' is the price of the nft token set by the artist */
     uint256 public priceInEth;
 
-    /** 'totalNumberOfArtPresent' gets the total number of art works present in the array list represnted in this smart contract */
-    uint256 public totalNumberOfArtPresent;
-
-       /** 'totalNumberOfFilesuploaded' gets the total number of art files/media uploaded to ipfs*/
+    /** 'totalNumberOfFilesuploaded' gets the total number of art files/media uploaded to ipfs*/
     uint256 totalNumberOfFilesUploaded;
 
-    /** totalNumberOfCollaboratorsPresent gets the total number of collaborators on this art collection */
-    uint256 public totalNumberOfCollaboratorsPresent;
+    struct Collaborator {
+        address payable _address;
+        uint8 rewardPercentage;
+        uint256 balance;
+    }
 
-    /** 'ART' is an array (works like a list) which contains the names/aliases of all art represnted in this smart contract */
-    string[] public ART;
+    /* 'artist' is the entity who is the MAIN creator of the art the nft represents. Artist is identified by an eth address*/
+    Collaborator artist;
 
-    /** array comtaining all ipfs generated hashes for each upload */
-    string[] public ipfshash;
+    Collaborator[] public collaborators;
+    uint256 public totalCollaborators;
 
-    address payable[] public COLLABORATORS;
+    /** Set to false if the media is not to be shown on the NFT page, or in searh results */
+    struct Art {
+        uint8 id;
+        string ipfsHash;
+        string _alias;
+    }
+    /** artArray contains all the art in the NFT. An alias will be used to identify the Art */
+    /** To save memory, we'll use an array for previewArt */
+    Art[] private artArray;
+    Art[] public previewArray;
+
+    /** 'totalArt' gets the total number of media present in the token */
+    uint256 public totalArt;
+
+    uint256 public totalArtAdded;
 
     /** mappings to be upated when an art is minted, added, a URI exists and for smart contract balances  */
     mapping(string => bool) _ArtMinted;
@@ -43,29 +48,29 @@ contract collabNFT is ERC721Full {
     mapping(string => bool) _URI_Exists;
     mapping(address => uint256) balances;
     mapping(address => bool) collaboratorAdded;
-    mapping (address => uint256)  public collaboratorRewards;
 
-    /* Safemath library is used for uint to prevent integer overflow during mathematical calculations */
     using SafeMath for uint;
 
-    /** 'contrustor contains arguments that must be provided before smart contract is deployed'*/
     constructor(
         string memory _name,
         string memory _symbol,
+
         address payable _artist,
-        uint256 _priceInETH
+        uint8 _artistCut,
+        address payable[] memory _collaborators,
+        uint8[] memory _collaboratorRewards,
+
+        bytes32[] memory ipfsHashes
     ) public ERC721Full(_name, _symbol) {
         name = _name;
         symbol = _symbol;
-        artist = _artist;
-        priceInEth = _priceInETH;
+        artist = Collaborator(_artist, _artistCut, 0);
+
+        setCollaborators(_collaborators, _collaboratorRewards);
     }
 
-    /** Receive eth and mint token function. function collects the art ID, which becomes the token ID, the token URI and token price in eth */
-
-    function ReceiveEthAndMint(
-        uint256 _ArtID,
-        string memory _uri,
+    /** Function collects the art ID, which becomes the token ID, the token URI and token price in eth */
+    function receiveEthAndMint(
         uint256 _tokenpriceInEth
     ) public payable {
         string memory _ArtAlias;
@@ -74,108 +79,120 @@ contract collabNFT is ERC721Full {
             !_ArtMinted[_ArtAlias],
             "this art is already tokenized on the blockchain"
         );
+
         require(
-            /** checks if uri is already added to a token */
-            !_URI_Exists[_uri],
-            "this uri already exists on the blockchain"
-        );
-        require(
-            /** cjecks if token price, eth value sent in this transaction is the same as the priceInEth */
+            /** Checks if token price, eth value sent in this transaction is the same as the priceInEth */
             _tokenpriceInEth == priceInEth && msg.value == priceInEth,
             "sent ether not equal to token price "
+        );
+        require(
+            /** Should not fail here, but checks that total collaborators is at most ten */
+            collaborators.length <= 10,
+            'Error minting NFT. Too many collaborators. Please contact contract creator'
         );
 
         /** logs updated ether balance of contract */
         balances[address(this)] += msg.value;
 
-        for (uint256 i = 0; i < totalNumberOfCollaboratorsPresent; i++) {
-            if (totalNumberOfCollaboratorsPresent == 0) {
+        for (uint256 i = 0; i < totalCollaborators; i++) {
+            if (totalCollaborators == 0) {
                 break;
             } else { 
-                address payable collaborators;
+                Collaborator memory _collaborator;
                 uint256 collaboratorReward;
-                uint256 FinalEthforCollaborator;
+                uint256 finalEth;
                 uint256 ethforCollaboratorBeforeCalculatingForPercentage;
 
-                collaborators = COLLABORATORS[i];
-                collaboratorReward = collaboratorRewards[collaborators];
+                _collaborator = collaborators[i];
 
-                ethforCollaboratorBeforeCalculatingForPercentage = collaboratorReward
-                    .mul(priceInEth);
-                FinalEthforCollaborator = ethforCollaboratorBeforeCalculatingForPercentage
-                    .div(100);
-
-                collaborators.transfer(FinalEthforCollaborator);
-                /** transfers the received eth to the artist  */
+                _collaborator.balance = priceInEth.div(100).mul(uint256(_collaborator.rewardPercentage));
             }
         } 
-        artist.transfer( address(this).balance);
-
-        /** logs updated ether balance of contract */
-        balances[address(this)] -= priceInEth;
-
-        /** gets art name/art alias from the Art Id which was inputted  */
-        _ArtAlias = getArtAliasByID(_ArtID);
-
-        /** updates mapping to show that art will be minted  */
-        _ArtMinted[_ArtAlias] = true;
-
-        /** mints Nft token with the art id to the function caller */
-        _mint(msg.sender, _ArtID);
-
-        /** updates mapping to show that uri is already with a token  */
-        _URI_Exists[_uri] = true;
-
-        /** set the uri to the token via the art id */
-        _setTokenURI(_ArtID, _uri);
     }
 
-    /** add art function to allow the artist only add art names/ aliases to the ART array/list */
-
-    function addART(string memory _ArtAlias, string memory ipfshashnumber) public {
-        /** checks if the function caller is the artist  */
+    /**
+      addMedia function to allow the artist only add art names/ aliases to the artArray array/list
+    */
+    function addMedia(string memory _ArtAlias, string memory ipfshashnumber) public {
         require(
-            msg.sender == artist,
-            " only the NFT artist can add artwork names to this list"
+            msg.sender == artist._address,
+            "Only the NFT artist can add artwork names to this list"
         );
 
-        /** checks if the art name/alias added has not been addded before */
+        /** Check that art is not being duplicated */
         require(
             !_ArtAdded[_ArtAlias] ,
-            "this art has been added with an art name into this array list"
-         
+            "Media with this name already exists on this NFT."
         );
-        
-        /** checks if the ipfs hash has been added to the smart contract before */ 
+        require(!ipfsAdded[ipfshashnumber], "Media with this IPFS hash already exists on this NFT contract");
 
-        require(!ipfsAdded[ipfshashnumber], "this art has been added with an art name into this array list");
-
-        /** push art name into the array, totalNumberOfArtPresent updates the number of art present by counting the number of times an alias/name  push was sucessful  */
-        totalNumberOfArtPresent = ART.push(_ArtAlias);
+        /** push art name into the array, totalArt updates the number of art present by counting the number of times an alias/name  push was sucessful  */
+        totalArt = artArray.push(Art(1, ipfshashnumber, _ArtAlias));
 
         /** uppates the mapping to show that art name/alias was added  */
         _ArtAdded[_ArtAlias] = true;
 
-        /** pushes ipfs hash into array */
-        totalNumberOfFilesUploaded = ipfshash.push(ipfshashnumber);
-
          /** uppates the mapping to show ipfs hash was added  */
         ipfsAdded[ipfshashnumber] = true;
-
-
     }
 
-    /** function to get art name/alias by ID */
-    function getArtAliasByID(uint256 __id) public view returns (string memory) {
-        uint256 ID;
-        string memory __ArtAlias;
+    function setCollaborators(
+        address payable[] memory _collaborators,
+        uint8[] memory _rewardPercentage
+    ) public returns(uint) {
+        /** checks if the function caller is the artist  */
+        require(
+            msg.sender == artist._address,
+            "only the NFT artist can set collaborators"
+        );
+        require(
+            _collaborators.length <= 10,
+            'NFT can only have up to 10 collaborators'
+        );
+        require(
+            _rewardPercentage.length == _collaborators.length,
+            'Length of collaborators array should equal length of percentage rewards'
+        );
 
-        /** ID is gotten by subtracting 1 from the __id each time the fucntion is called, computer reads from 0's upwards so im only optimizng for internal calculations to be compatible with computers */
-        ID = __id.sub(1);
+        /** Resetting collaborators array
+        delete collaborators;
+        */
+        delete collaborators;
 
-        /** art name/alias is gotten by using the ID to get the name/alias via an array call function */
-        __ArtAlias = ART[ID];
-        return __ArtAlias;
+        for (uint8 i = 0; i < _collaborators.length; i++) {
+            /** collaborators[i] = Collaborator(_collaborators[i], _rewardPercentage[i], 0); */
+            collaborators.push(
+                Collaborator(_collaborators[i], _rewardPercentage[i], 0)
+             );
+        }
+
+        /** totalCollaborators = _collaborators.length; */
+        return collaborators.length;
+    }
+
+    /** Returns collaborator addresses in one array, and reward percentages in another, in order */
+    function getCollaborators() public view returns(address[10] memory, uint8[10] memory) {
+        address[10] memory addrs;
+        uint8[10] memory rewardPercentages;
+
+        if(collaborators.length < 0) {
+            return (addrs, rewardPercentages);
+        } else {
+            for(uint8 i = 0; i < collaborators.length; i++) {
+                require(
+                    i < collaborators.length,
+                    "Here's the error"
+                );
+                addrs[i] = collaborators[i]._address;
+                rewardPercentages[i] = collaborators[i].rewardPercentage;
+                /*
+                addrs[i] = collaborators[i]._address;
+                rewardPercentages[i] = collaborators[i].rewardPercentage;
+                */
+            }
+
+            return (addrs, rewardPercentages);
+        }
     }
 
     /** function to get collaborator by number i.e collaborator 1 will have an id of 1 */
@@ -183,70 +200,22 @@ contract collabNFT is ERC721Full {
         uint256 collaboratorID;
         address collaboratorAddress;
 
-        /** ID is gotten by subtracting 1 from the __id each time the fucntion is called, computer reads from 0's upwards so im only optimizng for internal calculations to be compatible with computers */
         collaboratorID = __id.sub(1);
 
         /** art name/alias is gotten by using the ID to get the name/alias via an array call function */
-        collaboratorAddress = COLLABORATORS[collaboratorID];
+        collaboratorAddress = collaborators[collaboratorID]._address;
         return collaboratorAddress;
     }
 
     /** change art price function, can only be called by the artist. allows the artist to change art prices */
-    function ChangeArtPrice(uint256 _ArtPrice) public {
+    function setPrice(uint256 _ArtPrice) public {
         /** checks if function caller is thr ==e artist  */
         require(
-            msg.sender == artist,
+            msg.sender == artist._address,
             "you cannot change the art price, you are not the artist"
         );
 
         /**assign price in eth to art price*/
         priceInEth = _ArtPrice;
-    }
-
-    function AddCollaboratorsAndTheirRewardPercentage(
-        address payable collaborating_Artist,
-        uint256 percentageReward
-    ) public {
-        /** checks if the function caller is the artist  */
-        require(
-            msg.sender == artist,
-            " only the NFT artist can add to this list"
-        );
-
-        /** checks if the collabortor address added has not been addded before */
-        require(
-            !collaboratorAdded[collaborating_Artist],
-            "this collaborator has been added with an address into this array list"
-        );
-
-        /** uppates the mapping to show that art collaborator was added  */
-        collaboratorAdded[collaborating_Artist] = true;
-
-        /** maps collaborating artist address to percentage reward for the collab artist  */
-        collaboratorRewards[collaborating_Artist] = percentageReward;
-
-        /** push collaborator address into the array, totalNumberOfCollaboratorsPresent updates the number of art present by counting the number of times an alias/name  push was sucessful  */
-        totalNumberOfCollaboratorsPresent = COLLABORATORS.push(
-            collaborating_Artist
-        );
-    }
-
-    /** function added just incase sharing formula needs to be changed  */
-    function updatePercentageRewardForCollaborators(
-        address collaborating_Artist,
-        uint256 percentageReward
-    ) public {
-        /** checks if the function caller is the artist  */
-        require(
-            msg.sender == artist,
-            " only the NFT artist can add to this list"
-        );
-
-        /** updates mapping of collaborating artist address to percentage reward for the collab artist  */
-        collaboratorRewards[collaborating_Artist] = percentageReward;
-    }
-
-    function getCollaboratorCut( address _collaborator) public view returns(uint){
-        return collaboratorRewards[_collaborator];
     }
 }
