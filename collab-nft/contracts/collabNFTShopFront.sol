@@ -126,7 +126,7 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
-            msg.value == priceInEth,
+            msg.value == tokenPrice[_tokenID],
             "sent ether not equal to token price "
         );
         require(
