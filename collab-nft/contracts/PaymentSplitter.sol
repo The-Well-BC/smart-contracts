@@ -130,7 +130,7 @@ contract PaymentSplitter is Context {
     function payeeDetails(address account) public view checkShares returns (address, uint256, uint256) {
         Payee memory p = payeeMapping[account];
 
-        uint256 balance = (_totalReleased * p.shares) - p.released;
+        uint256 balance = (address(this).balance * p.shares / _totalShares) - p.released;
 
         return (p._address, uint256(p.shares), balance);
     }
