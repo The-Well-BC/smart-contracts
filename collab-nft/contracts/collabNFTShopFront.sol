@@ -126,10 +126,14 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
         _mint(msg.sender, _tokenID, amount, '');
     }
 
+    event TokenPrice(uint256 ID, uint256 price);
+
     /* @notice Can only be called by the artist. allows the artist to change art prices */
     function setPrice(uint256 tokenID, uint256 _ArtPrice) public isArtist {
         /* assign price in eth to art price */
         tokenPrice[tokenID] = _ArtPrice;
+
+        emit TokenPrice(tokenID, _ArtPrice);
     }
 
     function getCollaborators() external view returns(address[] memory) {
