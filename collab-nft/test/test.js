@@ -3,114 +3,46 @@ const chai = require('chai');
 const { expect } = chai;
 const { isMainThread } = require("worker_threads");
 
-const TemplateNFTMintContract = artifacts.require('collabNFT');
+const ShopFrontContract = artifacts.require('NFTShopFront');
 
-contract('collabNFT', function (accounts) {
+contract.only('ShopFront Contract', function (accounts) {
     let name = 'TEST ART';
     let symbol = 'TART';
     let collabNFTAddress;
-    let artist = accounts[0];
+    let artist = accounts[0],
+        artistCut = 100;
     let priceInEth = web3.utils.toWei('0.04', "ether");
     let artName1 = "The Well's Monalisa";
-    let ArtID;
+    let tokenID = 1, tokenPriceInWEI = web3.utils.toWei('0.3', 'ether');
     let NewArtPrice;
-    let collaborator1;
 
-    before(async () => {
-        // deploy the smart contract in test environment 
-        collabNFT = await TemplateNFTMintContract.new(name, symbol, artist, priceInEth);
-        // get smart contract address 
-        collabNFTAddress = collabNFT.address;
-    });
-
-    describe('Add new art', () => {
-        it('should add a new art name to the smart contract list', async () => {
-            // call addART function in smart contract to add new art to smart contract by its name 
-            return collabNFT.addART(artName1, '{placeholder for ipfs hash}')
-            .then(() => {
-                // get total number of art names present, art that can be minted 
-                return collabNFT.totalNumberOfArtPresent()
-                .then(numArtAdded => {
-                    // assert that etNumeberOfArtsAdded is equal to 1 right now as we have only added one name 
-                    console.log('Checking Contructor name is equal to BN:', (numArtAdded.constructor && numArtAdded.constructor.name === 'BN'));
-                    expect(numArtAdded.toString()).to.be.equal('1');
-
-                    // get added art name by calling it by its array list position/index
-                    return collabNFT.ART(0)
-                })
-                .then( AddedArtName => {
-                    // assert that added art name is present 
-                    expect(AddedArtName).to.equal(artName1);
-                });
-            })
+    before(() => {
+        return ShopFrontContract.new(artist, artistCut, [], [], 'https://boom.com/${id}')
+        .then(res => {
+            collabNFT = res;
+            contractAddress = collabNFT.address;
         });
-
-        it('should get art name by ID', async () => {
-
-            // art id is 1 since we've added only one artname which is he first and only art added 
-            ArtID = 1;
-
-            // get art name by the art id
-            ArtNameAdded = await collabNFT.getArtAliasByID(ArtID);
-
-            // assert that art name1 is the same as ArtNameAdded just gotten above
-            expect(artName1, 'artname isnt added').to.equal(ArtNameAdded)
-        })
     });
 
-    describe('Change art price', async () => {
-        it('Artist should be able to change art price', async () => {
-            //initialiaze a new art price for which one nft token will sell 
-            NewArtPrice = await web3.utils.toWei('0.08', "ether");
+    describe('Token Price - Setting, viewing and editing token price', function() {
+        it('Set token price', function() {
+            return collabNFT.setPrice(tokenID, tokenPriceInWEI)
+            .then(res => {
+                expect(res.receipt.logs[0]).to.have.property('event', 'TokenPrice');
+                let event = res.receipt.logs[0].args;
 
-            // update new art price on smart contract by calling the ChangeArtPrice function
-            await collabNFT.ChangeArtPrice(NewArtPrice, { from: accounts[0] });
-
-            console.log(priceInEth, 'is the old price of the nft/art')
-            console.log(NewArtPrice, 'is the new price of the nft/art')
-
-            // check if price is updated in smart contract
-            const newupdatedprice = await collabNFT.priceInEth();
-
-            /// assert that new art price is not the same as the priceInEth(old price)
-            expect(NewArtPrice, 'new art price and old price in eth must not be the same thing').to.not.equal(priceInEth);
-            expect(newupdatedprice.toString(), 'new updated price is not the same as new art price').to.equal(NewArtPrice);
-        })
-    })
-
-    describe('Manage Collaborators', async () => {
-        it('add new collaborators by their address and state their cut from the sale', async () => {
-            collaborator1 = accounts[8];
-            const collaborator1Percentage = '10';
-
-            await collabNFT.AddCollaboratorsAndTheirRewardPercentage(collaborator1, collaborator1Percentage, { from: accounts[0] });
-
-            /// call the getCollaboratorByID  smart contract function to get the address of the newly added collaborator. Collaborator addresss is tracked by virtue of when it was added. If collaborator address added first, it is nmber 1 hence put 1 as argument into the function
-            const addedaddress = await collabNFT.getCollaboratorByID(1);
-
-            /// assert that newly added address the same as the collaborator 1
-            expect(addedaddress, 'collaborator not added or collaborattor address and address in collaborator array not the same thing').to.equal(collaborator1);
-        })
-
-        it('update percentage reward for collaborator', async () => {
-            const collaborator1Percentage = '10';
-            const newcollaborator1Percentage = '20',
-                    collaborator1 = accounts[8]
-
-            await collabNFT.updatePercentageRewardForCollaborators(collaborator1, newcollaborator1Percentage, { from: accounts[0] });
-
-            let newPercentage = await collabNFT.getCollaboratorCut(collaborator1);
-
-            expect(newPercentage.toString(), 'percentage cut not updated').to.not.equal(collaborator1Percentage);
-            expect(newPercentage.toString(), 'percentage cut is not updated').to.equal(newcollaborator1Percentage);
-        })
+                expect(event).to.include.keys('ID', 'price');
+                expect(event.ID.toString()).to.equal(tokenID.toString());
+                expect(event.price.toString()).to.equal(tokenPriceInWEI.toString());
+            });
+        });
     });
 
-    describe('Receiving ETH, Minting nft, Sending minted NFT to eth sender ', async () => {
+    describe.skip('Receiving ETH, Minting nft, Sending minted NFT to eth sender ', async () => {
         it('should send nft token of specified art to the eth sender upon receipt of eth', async () => {
             const tokenURI = 'localhost: http://127.0.0.1:5500/'
             //call the ReceiveEthAndMint function in the smart contract
-            await collabNFT.ReceiveEthAndMint(ArtID, tokenURI, NewArtPrice, { from: accounts[6], value: NewArtPrice });
+            await collabNFT.ReceiveEthAndMint(ArtID, tokenURI, { from: accounts[6], value: NewArtPrice });
 
             // check nft token balance of eth sender 
             const tokenbalOfEthSender = await collabNFT.balanceOf(accounts[6])
@@ -127,7 +59,7 @@ contract('collabNFT', function (accounts) {
                 }
             })
 
-            const collaboratorEthBal = web3.eth.getBalance( collaborator1, function(err, result) {
+            const collaboratorEthBal = web3.eth.getBalance( accounts[6], function(err, result) {
                 if (err) {
                   console.error('Error:', err)
                 } else {

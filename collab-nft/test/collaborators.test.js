@@ -6,20 +6,15 @@ chai.use(
 const { expect } = chai;
 const { isMainThread } = require("worker_threads");
 
-const TemplateNFTMintContract = artifacts.require('CollabNFT');
+const ShopFrontContract = artifacts.require('NFTShopFront');
 
-contract.only('Test Collaborator functions', function (accounts) {
+contract('Setting and viewing Collaborators', function (accounts) {
     /* If using ganache-cli, run with ganache-cli -a 14 */
     let name = 'TEST ART';
     let symbol = 'TART';
     let artist = accounts[0];
     let a = accounts;
     let artistCut = 55;
-    let priceInEth = web3.utils.toWei('0.04', "ether");
-    let artName1 = "The Well's Monalisa";
-    let ArtID;
-    let NewArtPrice;
-    let collaborator1;
 
     describe('Fetching Collaborators', function() {
         let collabNFT, contractAddress;
@@ -27,7 +22,7 @@ contract.only('Test Collaborator functions', function (accounts) {
             collaboratorCuts = [5, 20, 8, 7, 5];
 
         before(function() {
-            return TemplateNFTMintContract.new(name, symbol, artist, artistCut, collaborators, collaboratorCuts, [])
+            return ShopFrontContract.new(artist, artistCut, collaborators, collaboratorCuts, 'https://boom.com/${id}')
             .then(res => {
                 collabNFT = res;
                 contractAddress = collabNFT.address;
@@ -37,23 +32,32 @@ contract.only('Test Collaborator functions', function (accounts) {
         it('Fetches all collaborators', function() {
             return collabNFT.getCollaborators()
             .then(res => {
-                let c = res['0'], _rewards = res['1'];
+                console.log('Got collaborator teting', res);
+                expect(res).to.have.lengthOf(collaborators.length + 1);
+                expect(res[0]).to.equal(artist);
 
-                for(i = 5; i < c.length; i++) {
-                    expect(c[i]).to.equal('0x0000000000000000000000000000000000000000', 'collaborators from index 4 till end should not be set');
-                    expect(_rewards[i].toString()).to.equal('0', 'collaborators from index 4 till end should not be set');
+                return Promise.all(collaborators.map(account => {
+                    return collabNFT.getCollaborator(account)
+                }));
+            }).then(res => {
+                for(let i = 1; i < res[0].length; i++) {
+                    let c = res[0][i];
+                    let _rewards = res[1][i];
+                    console.log('\n\nCollaborator:', c, '\nCollaborator Reward:', _rewards);
+
+                    expect(c[0]).to.equal(collaborators[0]); expect(_rewards[0].toString()).to.equal(collaboratorCuts[0].toString())
+                    expect(c[1]).to.equal(collaborators[1]); expect(_rewards[1].toString()).to.equal(collaboratorCuts[1].toString())
+                    expect(c[2]).to.equal(collaborators[2]); expect(_rewards[2].toString()).to.equal(collaboratorCuts[2].toString())
+                    expect(c[3]).to.equal(collaborators[3]); expect(_rewards[3].toString()).to.equal(collaboratorCuts[3].toString())
+                    expect(c[4]).to.equal(collaborators[4]); expect(_rewards[4].toString()).to.equal(collaboratorCuts[4].toString())
                 }
-                expect(c[0]).to.equal(collaborators[0]); expect(_rewards[0].toString()).to.equal(collaboratorCuts[0].toString())
-                expect(c[1]).to.equal(collaborators[1]); expect(_rewards[1].toString()).to.equal(collaboratorCuts[1].toString())
-                expect(c[2]).to.equal(collaborators[2]); expect(_rewards[2].toString()).to.equal(collaboratorCuts[2].toString())
-                expect(c[3]).to.equal(collaborators[3]); expect(_rewards[3].toString()).to.equal(collaboratorCuts[3].toString())
-                expect(c[4]).to.equal(collaborators[4]); expect(_rewards[4].toString()).to.equal(collaboratorCuts[4].toString())
             });
         });
     });
 
     describe('Setting Collaborators during deploy', function() {
-        it('Fail deploy if collaborators\' cuts + artist cuts != 100', function() {
+        it.skip('Fail deploy if collaborators\' cuts + artist cuts != 100', function() {
+        // Not needed anymore
             const paramArr = [
                 { collaborators: [accounts[1]], rewards: [20] },
                 { collaborators: [a[1], a[2]], rewards: [1, 2] },
@@ -62,12 +66,13 @@ contract.only('Test Collaborator functions', function (accounts) {
 
             return Promise.all(paramArr.map(({ collaborators, rewards }) => {
                 return expect(
-                    TemplateNFTMintContract.new(name, symbol, artist, artistCut, collaborators, rewards, [])
+                    ShopFrontContract.new(artist, artistCut, collaborators, rewards, 'https://oook.com/${id}')
                 ).to.be.rejected;
             }));
         });
 
-        it('Setting more than 10 collaborators should fail', function() {
+        it.skip('Setting more than 10 collaborators should fail', function() {
+        // Not needed anymore
             const paramArr = [{
                 collaborators: [a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11]],
                 rewards:[3, 4, 5, 4, 6, 4, 4, 4, 4, 6, 1]
@@ -81,7 +86,7 @@ contract.only('Test Collaborator functions', function (accounts) {
 
             return Promise.all(paramArr.map(({ collaborators, rewards }) => {
                 return expect(
-                    TemplateNFTMintContract.new(name, symbol, artist, artistCut, collaborators, rewards, [])
+                    ShopFrontContract.new(artist, artistCut, collaborators, rewards, 'https://asdf.com/${id}')
                 ).to.eventually.be.rejected;
             }));
         });
@@ -95,7 +100,7 @@ contract.only('Test Collaborator functions', function (accounts) {
 
             return Promise.all(paramArr.map(({ collaborators, rewards }) => {
                 return expect(
-                    TemplateNFTMintContract.new(name, symbol, artist, artistCut, collaborators, rewards, [])
+                    ShopFrontContract.new(artist, artistCut, collaborators, rewards, 'https://asdf.com/${id}')
                 ).to.eventually.to.be.fulfilled;
             }));
         });
@@ -115,54 +120,31 @@ contract.only('Test Collaborator functions', function (accounts) {
 
         tests.forEach((args) => {
             it(`Set ${ args.collaborators.length } collaborators`, function() {
-                return TemplateNFTMintContract.new(name, symbol, artist, artistCut, args.collaborators, args.rewards, [])
+                return ShopFrontContract.new(artist, artistCut, args.collaborators, args.rewards, 'https://boom.com/${id}')
                 .then(collabNFT => {
                     return collabNFT.getCollaborators()
                     .then(res => {
-                        let collaborators = res[0],
-                        percentageCuts = res[1];
+                        expect(res).to.have.lengthOf(args.collaborators.length + 1);
+                        expect(res[0]).to.equal(artist);
 
-                        for(i = 0; i < collaborators.length; i++) {
-                            if(i < args.collaborators.length) {
-                                expect(collaborators[i]).to.equal(args.collaborators[i]);
-                                expect(percentageCuts[i].toString()).to.equal(args.rewards[i].toString());
-                            } else {
-                                expect(collaborators[i]).to.equal('0x0000000000000000000000000000000000000000');
-                                expect(percentageCuts[i].toString()).to.equal('0');
-                            }
-                        }
-                    });
+                        return Promise.all(args.collaborators.map(account => {
+                            console.log('Getting Collaborator details for addr:', account);
+                            return collabNFT.getCollaborator(account)
+                        }));
+                    }).then(res => {
+                        expect(res).to.have.lengthOf(args.collaborators.length);
+                        console.log('All collaborators', res);
+                        res.forEach((result, i) => {
+                            let collaborator = result[0],
+                            percentageCut = result[1];
+
+                            console.log('\n\nSingle collaborator:', result);
+                            console.log('Index:', i);
+                            expect(collaborator).to.equal(args.collaborators[i]);
+                            expect(percentageCut.toString()).to.equal(args.rewards[i].toString());
+                        })
+                    })
                 })
-            });
-        });
-    });
-
-    describe('Paying Collaborators and Creator', function() {
-        let collabNFT, contractAddress;
-        let collaborators = [a[1], a[2], a[3], a[4]],
-            collaboratorCuts = [5, 25, 5, 10];
-        before(function() {
-            return TemplateNFTMintContract.new(name, symbol, artist, artistCut, collaborators, collaboratorCuts, [])
-            .then(res => {
-                collabNFT = res;
-                contractAddress = collabNFT.address;
-            });
-        });
-
-        it('Should add to collaborators\' balance', function() {
-            const tokenURI = 'localhost: http://127.0.0.1:5500/'
-            return collabNFT.receiveEthAndMint(12)
-            .then(res => {
-                const collaboratorEthBal = web3.eth.getBalance(collaborators[0], function(err, result) {
-                    if (err) {
-                        console.error('Error:', err)
-                    } else {
-                        const bal = web3.utils.fromWei(result, "ether");
-                        console.log(bal + " ETH")
-
-                        expect(bal)
-                    }
-                });
             });
         });
     });
