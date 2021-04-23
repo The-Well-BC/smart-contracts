@@ -1658,6 +1658,11 @@
     "mkdirp" "^1.0.4"
     "rimraf" "^3.0.2"
 
+"@openzeppelin/contracts@^4.0.0":
+  "integrity" "sha512-UcIJl/vUVjTr3H1yYXZi7Sr2PlXzBEHVUJKOUlVyzyy0FI8oQCCy0Wx+BuK/fojdnmLeMvUk4KUvhKUybP+C7Q=="
+  "resolved" "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-4.0.0.tgz"
+  "version" "4.0.0"
+
 "@pmmmwh/react-refresh-webpack-plugin@0.4.3":
   "integrity" "sha512-br5Qwvh8D2OQqSXpd1g/xqXKnK0r+Jz6qVKBbWmpUcrbGOxUrf39V5oZ1876084CGn18uMdR5uvPqBv9UqtBjQ=="
   "resolved" "https://registry.yarnpkg.com/@pmmmwh/react-refresh-webpack-plugin/-/react-refresh-webpack-plugin-0.4.3.tgz"
