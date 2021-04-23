@@ -17,12 +17,6 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
 
     mapping(uint256 => uint256) tokenPrice;
 
-    /* 'priceInEth' is the price of the nft token set by the artist */
-    uint256 public priceInEth;
-
-    /* 'totalNumberOfFilesuploaded' gets the total number of art files/media uploaded to ipfs*/
-    uint256 totalNumberOfFilesUploaded;
-
     struct Collaborator {
         address payable _address;
         uint8 rewardPercentage;
@@ -41,15 +35,6 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
         string ipfsHash;
         string _alias;
     }
-    /* artArray contains all the art in the NFT. An alias will be used to identify the Art */
-    /* To save memory, we'll use an array for previewArt */
-    Art[] private artArray;
-    Art[] public previewArray;
-
-    /* 'totalArt' gets the total number of media present in the token */
-    uint256 public totalArt;
-
-    uint256 public totalArtAdded;
 
     /**
      * @notice Sets collaboratrs, artist, and artist/collaborator cuts
@@ -141,18 +126,9 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
         _mint(msg.sender, _tokenID, amount, '');
     }
 
-    /**
-     * @notice addMedia nunction to allow the artist only add art names/ aliases to the artArray array/list
-     */
-    function addMedia(string memory tokenID, string memory _ipfsHash) public  isArtist{
-        /* push art name into the array, totalArt updates the number of art present by counting the number of times an alias/name  push was sucessful  */
-        artArray.push(Art(1, _ipfsHash, ''));
-        totalArt++;
-    }
-
-    /* change art price function, can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 _ArtPrice, uint256 tokenID) public isArtist {
-        /*assign price in eth to art price*/
+    /* @notice Can only be called by the artist. allows the artist to change art prices */
+    function setPrice(uint256 tokenID, uint256 _ArtPrice) public isArtist {
+        /* assign price in eth to art price */
         tokenPrice[tokenID] = _ArtPrice;
     }
 
