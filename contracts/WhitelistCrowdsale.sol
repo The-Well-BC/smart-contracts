@@ -3,15 +3,20 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+// TODO: Handle sale of both WELL and mint tokens to collectors.
 contract WhitelistCrowdsale {
+
     uint256 private _rate;
     address payable private _wallet;
     IERC20 private _token;
 
+    uint256 private _weiRaised;
+    address owner;
+
     // Whitelisted buyers
     mapping(address => bool) public whitelist;
 
-    constructor(rate_, wallet_, token_) {
+    constructor(uint256 rate_, address payable wallet_, IERC20 token_) {
         require(rate_ > 0, 'Crowdsale: rate must be greater than 0');
         require(wallet_ != address(0), 'Crowdsale: wallet is the zero address');
         require(address(token_) != address(0), 'Crowdsale: token is the zero address');
@@ -19,6 +24,8 @@ contract WhitelistCrowdsale {
         _rate = rate_;
         _wallet = wallet_;
         _token = token_;
+
+        owner = msg.sender;
     }
 
     function token() external view returns(IERC20) {
@@ -50,29 +57,30 @@ contract WhitelistCrowdsale {
         whitelist[beneficiary_] = true;
     }
 
-    event TokensPurchased(purchaser, beneficiary, value, amount);
+    event TokensPurchased(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+
 
 
     function _getTokenAmount(uint256 weiAmount) internal view returns (uint256) {
-        return weiAmount.mul(_rate);
+        return weiAmount * _rate;
     }
 
     /**
     buyTokens function
     */
-    function buyTokens(address beneficiary_) external payable isWhitelisted(beneficiary_) {
+    function buyTokens(address beneficiary_) public payable isWhitelisted(beneficiary_) {
         uint256 weiAmount = msg.value;
-        _prevalidatePurchase(beneficiary_, weiAmount);
+        _preValidatePurchase(beneficiary_, weiAmount);
 
         uint256 tokens = _getTokenAmount(weiAmount);
 
-        _weiRaised = _weiRaised.add(weiAmount);
+        _weiRaised = _weiRaised + weiAmount;
 
-        _updatePurchasingState(beneficuary, weiAmount);
+        _updatePurchasingState(beneficiary_, weiAmount);
 
         _forwardFunds();
-        emit TokensPuchased(msg.sender, beneficiary, weiAmount, tokens);
-        _postValidatePurchase(beneficuary, weiAmount);
+        emit TokensPurchased(msg.sender, beneficiary_, weiAmount, tokens);
+        _postValidatePurchase(beneficiary_, weiAmount);
     }
 
     function _preValidatePurchase(address beneficiary, uint256 weiAmount) internal view {
@@ -81,13 +89,25 @@ contract WhitelistCrowdsale {
         this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
     }
 
+    function _postValidatePurchase(address beneficiary, uint256 weiAmount) internal view {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+
+    function _updatePurchasingState(address beneficiary, uint256 weiAmount) internal {
+        // solhint-disable-previous-line no-empty-blocks
+    }
     /**
       Sends ETH to wallet 
      */
     function _forwardFunds() internal {
         _wallet.transfer(msg.value);
     }
-    function () external payable {
-        buyTokens(_msgSender());
+
+    fallback() external payable {
+        buyTokens(msg.sender);
+    }
+    receive() external payable {
+        buyTokens(msg.sender);
     }
 }
