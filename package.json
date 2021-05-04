@@ -2,5 +2,8 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.1.0",
     "openzeppelin-2.5": "npm:@openzeppelin/contracts@v2.5"
+  },
+  "scripts": {
+    "test:contracts": "nodemon -e js,sol --exec 'truffle test --show-events'"
   }
 }
