@@ -4,7 +4,7 @@ chai.use(
 );
 const { expect } = chai;
 
-let freshToken;
+let freshToken, wellToken;
 const FreshTokenContract = artifacts.require('Fresh');
 const WellTokenContract = artifacts.require('Well');
 
@@ -16,15 +16,22 @@ contract('Crowdsale: Test sale', function(accounts) {
     const tokensPerWei = 4;
 
     before(function() {
-        return WellTokenContract.new()
+        return Promise.all([
+            WellTokenContract.new(),
+            FreshTokenContract.new()
+        ])
         .then(res => {
-            freshToken = res;
-            return WhitelistCrowdsale.new(tokensPerWei, accounts[0], freshToken.address)
+            wellToken = res[0];
+            freshToken = res[1];
+            return WhitelistCrowdsale.new(tokensPerWei, accounts[0], wellToken.address, freshToken.address)
         })
         .then(res => {
             crowdsale = res;
 
-            return freshToken.grantMinterRole(crowdsale.address)
+            return Promise.all([
+                wellToken.grantMinterRole(crowdsale.address),
+                freshToken.grantMinterRole(crowdsale.address)
+            ])
             .then(res => {
                 console.log('Granted MInter Role to :', crowdsale.address)
                 console.log(res);
@@ -44,13 +51,16 @@ contract('Crowdsale: Test sale', function(accounts) {
             expect(res.logs[0].args.value.toString()).to.equal(purchaseAmount);
             expect(res.logs[0].args.amount.toString()).to.equal((10**20).toString());
 
-            return freshToken.balanceOf(buyer)
+            return wellToken.balanceOf(buyer)
             .then(res => {
                 expect(res.toString()).to.equal((10**20).toString());
+                return freshToken.balanceOf(buyer)
+            }).then(res => {
+                expect(res.toString()).to.equal('5');
             });
         });
     });
-    it('Pay 25ETH, get 1 $WELL, 5 $FRESH tokens', function() {
+    it('Pay 50ETH, get 1 $WELL, 10 $FRESH tokens', function() {
         const buyer = accounts[5];
         const purchaseAmount = web3.utils.toWei('50', 'ether');
 
@@ -66,9 +76,12 @@ contract('Crowdsale: Test sale', function(accounts) {
             expect(res.logs[0].args.value.toString()).to.equal(purchaseAmount);
             expect(res.logs[0].args.amount.toString()).to.equal((2 * (10**20)).toString());
 
-            return freshToken.balanceOf(buyer)
+            return wellToken.balanceOf(buyer)
             .then(res => {
                 expect(res.toString()).to.equal((2 * (10**20)).toString());
+                return freshToken.balanceOf(buyer)
+            }).then(res => {
+                expect(res.toString()).to.equal('5');
             });
         });
     });
@@ -87,7 +100,7 @@ contract('Crowdsale: Test Whitelisting', function(accounts) {
         const buyer = accounts[3];
         const purchaseAmount = web3.utils.toWei('10', 'ether');
 
-        return WhitelistCrowdsale.new(rateInWEI, accounts[0], freshToken.address)
+        return WhitelistCrowdsale.new(rateInWEI, accounts[0], wellToken.address, freshToken.address)
         .then(crowdsale => {
             return expect(
                 crowdsale.buyTokens(buyer, {from: buyer, value: purchaseAmount})
