@@ -8,7 +8,7 @@ import "./ERC20Minter.sol";
 contract Well is ERC20Minter {
     string private _name;
 
-    constructor() ERC20Minter('Well', 'WELL'){
+    constructor() ERC20Minter('The Well', 'WELL'){
         _name = 'Well';
     }
 }
