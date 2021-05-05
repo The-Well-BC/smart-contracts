@@ -12,7 +12,8 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // The token being sold
-    IERC20 private _token;
+    IERC20 private _wellToken;
+    IERC20 private _freshToken;
 
     // Address where funds are collected
     address payable private _wallet;
@@ -46,18 +47,21 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
      * token unit. So, if you are using a rate of 1 with a ERC20Detailed token
      * with 3 decimals called TOK, 1 wei will give you 1 unit, or 0.001 TOK.
      * @param wallet_ Address where collected funds will be forwarded to
-     * @param token_ Address of the token being sold
+     * @param wellToken_ Address of the $WELL token
+     * @param freshToken_ Address of the $FRESH token
      * @param tokensPerWei_ Number of tokens to be sold per wei
      */
 
-    constructor(uint256 tokensPerWei_, address payable wallet_, IERC20 token_) {
+    constructor(uint256 tokensPerWei_, address payable wallet_, IERC20 wellToken_, IERC20 freshToken_) {
         require(tokensPerWei_ > 0, 'Crowdsale: tokensPerWei must be greater than 0');
         require(wallet_ != address(0), 'Crowdsale: wallet is the zero address');
-        require(address(token_) != address(0), 'Crowdsale: token is the zero address');
+        require(address(wellToken_) != address(0), 'Crowdsale: $WELL token is the zero address');
+        require(address(freshToken_) != address(0), 'Crowdsale: $FRESH token is the zero address');
 
         _rate = tokensPerWei_;
         _wallet = wallet_;
-        _token = token_;
+        _wellToken = wellToken_;
+        _freshToken = freshToken_;
 
         owner = msg.sender;
     }
@@ -79,7 +83,7 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
      * @return the token being sold.
      */
     function token() public view returns (IERC20) {
-        return _token;
+        return _wellToken;
     }
 
     /**
@@ -179,7 +183,8 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
      */
     function _deliverTokens(address beneficiary, uint256 tokenAmount) internal {
         // Potentially dangerous assumption about the type of the token.
-        ERC20Minter(address(token())).mint(beneficiary, tokenAmount);
+        ERC20Minter(address(_wellToken)).mint(beneficiary, tokenAmount);
+        ERC20Minter(address(_freshToken)).mint(beneficiary, 5);
             /*
         require(
             ERC20Minter(address(token())).mint(beneficiary, tokenAmount) == true,
