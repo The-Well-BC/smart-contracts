@@ -7,6 +7,19 @@ module.exports = {
             port: 8545,
             network_id: "5777"
         },
+        test: {
+            host: '127.0.0.1',
+            port: 9545,
+            network_id: 1337
+        },
+        /*
+        develop: {
+            network_id: 20,
+            accounts: 5,
+            defaultEtherBalance: 9000,
+            blockTime: 3
+        },
+        */
         ropsten: {
             provider: function() {
                 return new HDWalletProvider({
