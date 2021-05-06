@@ -136,13 +136,14 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
         _preValidatePurchase(beneficiary, weiAmount);
 
         // calculate token amount to be created
-        uint256 tokens = _getTokenAmount(weiAmount);
+        uint256 well = _getWellTokenAmount(weiAmount);
+        uint256 fresh = _getFreshTokenAmount(weiAmount);
 
         // update state
         _weiRaised = _weiRaised + weiAmount;
 
-        _processPurchase(beneficiary, tokens);
-        emit TokensPurchased(_msgSender(), beneficiary, weiAmount, tokens);
+        _processPurchase(beneficiary, well, fresh);
+        emit TokensPurchased(_msgSender(), beneficiary, weiAmount, well);
 
         _updatePurchasingState(beneficiary, weiAmount);
 
@@ -179,12 +180,13 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
      * @dev Source of tokens. Override this method to modify the way in which the crowdsale ultimately gets and sends
      * its tokens.
      * @param beneficiary Address performing the token purchase
-     * @param tokenAmount Number of tokens to be emitted
+     * @param well Number of well tokens to be emitted
+     * @param fresh Number of fresh tokens to be emitted
      */
-    function _deliverTokens(address beneficiary, uint256 tokenAmount) internal {
+    function _deliverTokens(address beneficiary, uint256 well, uint256 fresh) internal {
         // Potentially dangerous assumption about the type of the token.
-        ERC20Minter(address(_wellToken)).mint(beneficiary, tokenAmount);
-        ERC20Minter(address(_freshToken)).mint(beneficiary, 5);
+        ERC20Minter(address(_wellToken)).mint(beneficiary, well);
+        ERC20Minter(address(_freshToken)).mint(beneficiary, fresh);
             /*
         require(
             ERC20Minter(address(token())).mint(beneficiary, tokenAmount) == true,
@@ -198,10 +200,10 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
      * @dev Executed when a purchase has been validated and is ready to be executed. Doesn't necessarily emit/send
      * tokens.
      * @param beneficiary Address receiving the tokens
-     * @param tokenAmount Number of tokens to be purchased
+     * @param well Number of well tokens to be purchased
      */
-    function _processPurchase(address beneficiary, uint256 tokenAmount) internal {
-        _deliverTokens(beneficiary, tokenAmount);
+    function _processPurchase(address beneficiary, uint256 well, uint256 fresh) internal {
+        _deliverTokens(beneficiary, well, fresh);
     }
 
     /**
@@ -219,8 +221,11 @@ contract WhitelistCrowdsale is Context, ReentrancyGuard {
      * @param weiAmount Value in wei to be converted into tokens
      * @return Number of tokens that can be purchased with the specified _weiAmount
      */
-    function _getTokenAmount(uint256 weiAmount) internal view returns (uint256) {
+    function _getWellTokenAmount(uint256 weiAmount) internal view returns (uint256) {
         return weiAmount * _rate;
+    }
+    function _getFreshTokenAmount(uint256 weiAmount) internal view returns (uint256) {
+        return 5 * (10 ** 18);
     }
 
     /**
