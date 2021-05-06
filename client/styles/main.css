@@ -16,7 +16,7 @@ body {
     align-items: center;
 }
 
-button {
+#page button {
     font-size: 2rem;
     padding: 0.5rem 1rem;
 }
@@ -29,4 +29,8 @@ p.center {
     background: #eeeeee;
     padding: 0.5rem;
     min-height: 2rem;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }

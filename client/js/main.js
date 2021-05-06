@@ -1,41 +1,3 @@
-let connect = document.createElement('button');
-connect.innerText = 'Connect Wallet';
-connect.onclick = connectWallet;
-
-let addressElement = document.createElement('p');
-let account;
-
-const initialise = function() {
-    if(typeof window.ethereum)  {
-        // Metamask is installed
-        if(window.ethereum.selectedAddress) {
-            account = window.ethereum.selectedAddress;
-            addressElement.innerText = window.ethereum.selectedAddress;
-            document.getElementById('menu').appendChild(addressElement);
-        } else {
-            document.getElementById('menu').appendChild(connect);
-        }
-
-    } else {
-        alert('Please startup or install Metamask. If you\'re on Brave, use the CrytoWallets plugin');
-    }
-}
-
-function connectWallet() {
-    return window.ethereum.request({ method: 'eth_requestAccounts' })
-    .then(res => {
-        console.log('Connected Metamask:', res);
-        console.log('Connected Account:', window.ethereum.selectedAddress);
-
-        account = window.ethereum.selectedAddress;
-        addressElement.innerText = window.ethereum.selectedAddress;
-        document.getElementById('menu').removeChild(connect);
-        document.getElementById('menu').appendChild(addressElement);
-    });
-}
-
-window.onload = initialise();
-
 function purchase() {
     console.log('Purchasing tokens');
     const web3 = new Web3(window.ethereum);
@@ -118,13 +80,43 @@ function purchase() {
 		}
 	];
 
-    const contractAddress = '0xb08bFb926fBc6Fa6B6c5DaA6591E7c48c56a5966';
+    let contractAddress = contractAddresses.CROWDSALE_CONTRACT;
 
     const CrowdsaleContract = new web3.eth.Contract(contractABI, contractAddress);
 
     const purchaseAmount = web3.utils.toWei('25', 'ether');
     return CrowdsaleContract.methods.buyTokens(account).send({ from: account, value: purchaseAmount })
     .then(res => {
-        console.log('Bought tokens. Check wallet now');
+        // Add Tokens to User's wallet
+        // $WELL
+
+        return Promise.all([
+            window.ethereum.request({
+                method: 'wallet_watchAsset',
+                params: {
+                    type: 'ERC20',
+                    options: {
+                        address: contractAddresses.WELL_TOKEN_CONTRACT,
+                        symbol: 'WELL',
+                        decimals: 20
+                    }
+                }
+            }),
+            window.ethereum.request({
+                method: 'wallet_watchAsset',
+                params: {
+                    type: 'ERC20',
+                    options: {
+                        address: contractAddresses.FRESH_TOKEN_CONTRACT,
+                        symbol: 'FRESH',
+                        decimals: 18,
+                    }
+                }
+            })
+        ]).then(res => {
+            console.log('Added Well Token to user\'s wallet:', res[0]);
+            console.log('Added $FRESH to wallet:', res[1]);
+            alert('Bought tokens. Check wallet now');
+        });
     });
 } 
