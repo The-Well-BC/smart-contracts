@@ -35,6 +35,11 @@ const initialise = function() {
             addressElement.innerText = window.ethereum.selectedAddress;
             document.getElementById('menu').appendChild(addressElement);
         } else {
+            Array.prototype.slice.call(document.getElementsByTagName('button'))
+                .forEach(el => {
+                console.log('Button Element:', el);
+                    el.disabled =true;
+            });
             document.getElementById('menu').appendChild(connect);
         }
 
@@ -59,6 +64,12 @@ function connectWallet() {
             console.log('Network Chain ID:', res);
 
             return setContractAddresses(res);
+        }).then(res => {
+            Array.prototype.slice.call(document.getElementsByTagName('button'))
+                .forEach(el => {
+                console.log('Button Element:', el);
+                    el.disabled =false;
+            });
         });
     });
 }
