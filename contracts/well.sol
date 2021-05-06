@@ -9,6 +9,9 @@ contract Well is ERC20Minter {
     string private _name;
 
     constructor() ERC20Minter('The Well', 'WELL'){
-        _name = 'Well';
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return 20;
     }
 }
