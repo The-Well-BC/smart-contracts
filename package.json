@@ -5,7 +5,10 @@
     "openzeppelin-2.5": "npm:@openzeppelin/contracts@v2.5"
   },
   "scripts": {
-    "test:contracts": "nodemon -e js,sol --ignore 'client/' --exec 'truffle test --show-events'"
+    "test:contracts": "nodemon -e js,sol --ignore 'client/' --exec 'truffle test --show-events'",
+    "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
+    "ropsten:migrate:reset": ". ./.env.local && npx truffle migrate --reset --network ropsten",
+    "ropsten:console": ". ./.env.local && npx truffle console --network ropsten"
   },
   "devDependencies": {
     "chai": "^4.3.4",
