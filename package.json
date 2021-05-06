@@ -5,7 +5,7 @@
     "openzeppelin-2.5": "npm:@openzeppelin/contracts@v2.5"
   },
   "scripts": {
-    "test:contracts": "nodemon -e js,sol --exec 'truffle test --show-events'"
+    "test:contracts": "nodemon -e js,sol --ignore 'client/' --exec 'truffle test --show-events'"
   },
   "devDependencies": {
     "chai": "^4.3.4",
