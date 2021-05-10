@@ -5,7 +5,7 @@
     "openzeppelin-2.5": "npm:@openzeppelin/contracts@v2.5"
   },
   "scripts": {
-    "blockchain:test": "ganache-cli --defaultBalanceEther 90000000000000000000 -i 1337 -p 9545",
+    "test-chain": "ganache-cli --defaultBalanceEther 90000000000000000000 -i 1337 -p 9545",
     "test:contracts": "nodemon -e js,sol --ignore 'client/' --exec 'truffle test --network test --show-events'",
     "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
     "ropsten:migrate:reset": ". ./.env.local && npx truffle migrate --reset --network ropsten",
