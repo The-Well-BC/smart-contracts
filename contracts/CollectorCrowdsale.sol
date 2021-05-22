@@ -10,14 +10,14 @@ import './WhitelistCrowdsale.sol';
 contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
      using SafeERC20 for IERC20;
 
-    // Packages sold in crowdsale contract
+    // Package sold in crowdsale contract
     struct Package{
         string name;
         PackageToken[] tokens;
         uint256 priceInWEI;
     }
 
-    // tokens contained in packages
+    // Token object to be used in packages
     struct PackageToken {
         IERC20 _address;
         uint256 amount;
@@ -46,9 +46,6 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
     event TokensPurchased(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
     /**
-     * @dev The rate is the conversion between wei and the smallest and indivisible
-     * token unit. So, if you are using a rate of 1 with a ERC20Detailed token
-     * with 3 decimals called TOK, 1 wei will give you 1 unit, or 0.001 TOK.
      * @param wallet_ Address where collected funds will be forwarded to
      */
 
@@ -72,16 +69,15 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
 
     function addPackage(string memory name_, uint256 priceInWEI_, address[] memory tokenAddresses, uint256[] memory tokenAmounts)
         external onlyOwner
-    returns (uint packageID_) {
+    {
         require(tokenAddresses.length >= 1,
-                'Must have at least one token'
-               );
-
+                'At least one token required'
+        );
         require(tokenAddresses.length == tokenAmounts.length,
-                'tokenAddresses array must have the same length as tokenAmounts array'
+                'tokenAddresses array and tokenAmounts must have equal length'
         );
         require(tokenAddresses.length <= 10,
-                'Too many tokens. Max of 10 tokens required'
+                'Max of 10 tokens required'
         );
 
         _packages[nextPackageID].name = name_;
@@ -97,9 +93,8 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
         _packageIDs.push(nextPackageID);
 
         nextPackageID++;
-
-        return nextPackageID - 1;
     }
+
     /**
      * @dev returns the tokens contained in a package
      * @param packageID - ID of the package for which tokens are being requested
@@ -148,7 +143,7 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
     }
 
     /**
-     * @return IDs - Array of package IDs
+     * @return IDs - Package IDs
      * @return prices_ - array of package prices
      */
     function packages() public view returns (uint[] memory IDs, uint[] memory prices_) {
@@ -169,7 +164,7 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
     }
 
     /**
-     * @dev low level token purchase ***DO NOT OVERRIDE***
+     * @dev low level token purchase
      * This function has a non-reentrancy guard, so it shouldn't be called by
      * another `nonReentrant` function.
      * @param beneficiary Recipient of the token purchase
@@ -223,8 +218,7 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
     }
 
     /**
-     * @dev Source of tokens. Override this method to modify the way in which the crowdsale ultimately gets and sends
-     * its tokens.
+     * @dev Source of tokens.
      * @param beneficiary Address performing the token purchase
      * @param tokens_ Array of tokens {Token} to be delivered. The amount of tokens to be minted will be fetched
      * from the packageTokenAmounts mapping
@@ -240,7 +234,6 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
             "MintedCrowdsale: minting failed"
         );
         */
-            // ERC20Minter(address(token())).mint(beneficiary, tokenAmount),
     }
 
     /**
@@ -254,7 +247,6 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
     }
 
     /**
-     * @dev Override for extensions that require an internal state to check for validity (current user contributions,
      * etc.)
      * @param beneficiary Address receiving the tokens
      * @param weiAmount Value in wei involved in the purchase
@@ -264,7 +256,6 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
     }
 
     /**
-     * @dev Override to extend the way in which ether is converted to tokens.
      * @param packageID - ID of the package to fetch tokens and their amounts.
      * @return tokens_ Number of tokens that can be purchased with the specified _weiAmount
      */
@@ -281,9 +272,6 @@ contract CollectorCrowdsale is ReentrancyGuard, WhitelistCrowdsale {
 
     /**
      * @dev fallback function ***DO NOT OVERRIDE***
-     * Note that other contracts will transfer funds with a base gas stipend
-     * of 2300, which is not enough to call buyTokens. Consider calling
-     * buyTokens directly when purchasing tokens from a contract.
      */
     fallback() external payable {
         revert('Call the buyTokens method');
