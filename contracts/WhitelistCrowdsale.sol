@@ -27,4 +27,8 @@ contract WhitelistCrowdsale is Context {
     function addToWhitelist(address beneficiary_) external onlyOwner {
         whitelist[beneficiary_] = true;
     }
+
+    function removeFromWhitelist(address beneficiary_) external onlyOwner {
+        whitelist[beneficiary_] = false;
+    }
 }
