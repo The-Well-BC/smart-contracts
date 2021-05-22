@@ -1,4 +1,4 @@
-const WhitelistCrowdsale = artifacts.require('WhitelistCrowdsale');
+const WhitelistCrowdsale = artifacts.require('CollectorCrowdsale');
 const Well = artifacts.require('Well');
 const Fresh = artifacts.require('Fresh');
 
