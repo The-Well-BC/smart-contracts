@@ -25,3 +25,8 @@ yarn-error.log*
 # vim
 .*.swp
 .*.swo
+
+# contract artifacts
+abis/
+build/
+binary/
