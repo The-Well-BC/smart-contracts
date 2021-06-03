@@ -8,28 +8,28 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /**
  * @title PaymentSplitter
- * @dev This contract is based on OpenZeppelin's payment splitter.
- *
- * Differences include:
- * - Deleted constructor
- * - _setShares() was added
- * - _checkShares() was added
- * - _addPayees no longer be called in the constructor
+ * @dev PaymentSplitter for ERC721 contract. Will work with TheWellNFT. Each token has it's own set of payees[tokenId].
  *
  */
 contract PaymentSplitter is Context {
-    event PayeeAdded(address account, uint256 shares);
-    event PaymentReleased(address to, uint256 amount);
-    event PaymentReceived(address from, uint256 amount);
+    event PayeeAdded(uint256 tokenId, address account, uint256 shares);
+    event PaymentReleased(uint256 tokenId, address to, uint256 amount);
+    event PaymentReceived(uint256 tokenId, address from, uint256 amount);
 
-    uint256 private _totalShares;
-    uint256 private _totalReleased;
+    // Mapping of tokenId to total shares of token
+    mapping(uint256 => uint256) private _totalShares;
+    // Mapping of tokenId to total amount of eth released to token payees
+    mapping(uint256 => uint256) private _totalReleased;
 
-    mapping(address => uint256) internal _shares;
-    mapping(address => uint256) private _released;
-    address[] internal _payees;
+    // Mapping of tokenId to mapping of payee address to amount shares of shares belong to payee
+    mapping(uint256 => mapping(address => uint256)) internal _shares;
+    // Mapping of tokenId to mapping of payee address to amount released to payee
+    mapping(uint256 => mapping(address => uint256)) private _released;
 
-    mapping(address => Payee) internal payeeMapping;
+    // Mapping of tokenId to array of token payees ie (collaborators)
+    mapping(uint256 => address[]) internal _payees;
+
+    mapping(uint256 => mapping(address => Payee)) internal payeeMapping;
 
     struct Payee{
         address _address;
@@ -40,9 +40,9 @@ contract PaymentSplitter is Context {
     /**
       * @dev Checks that shares have been set.
       */
-     modifier checkShares() {
+     modifier checkShares(uint256 tokenId) {
          require(
-             _payees.length > 0,
+             _payees[tokenId].length > 0,
              'PaymentSplitter: You have to set the payees and their share percentages first. Use _setShares()'
          );
          _;
@@ -57,10 +57,10 @@ contract PaymentSplitter is Context {
      * All addresses in `payees` must be non-zero. Both arrays must have the same non-zero length, and there must be no
      * duplicates in `payees`.
      */
-    function _setShares(address[] memory payees, uint256[] memory shares_) internal {
+    function _setShares(uint256 tokenId, address[] memory payees, uint256[] memory shares_) internal {
         // Can only be set once
         require(
-            _payees.length == 0,
+            _payees[tokenId].length == 0,
             'You can only set shares once'
         );
 
@@ -68,12 +68,12 @@ contract PaymentSplitter is Context {
         require(payees.length > 0, "PaymentSplitter: no payees");
 
         for (uint256 i = 0; i < payees.length; i++) {
-            _addPayee(payees[i], shares_[i]);
+            _addPayee(tokenId, payees[i], shares_[i]);
         }
     }
 
-    function receivePayment() internal checkShares {
-        emit PaymentReceived(_msgSender(), msg.value);
+    function receivePayment(uint256 tokenId) internal checkShares(tokenId) {
+        emit PaymentReceived(tokenId, _msgSender(), msg.value);
     }
 
     /**
@@ -85,52 +85,52 @@ contract PaymentSplitter is Context {
      * https://solidity.readthedocs.io/en/latest/contracts.html#fallback-function[fallback
      * functions].
      */
-    receive () external payable virtual {
-        receivePayment();
+    receive() external payable virtual {
+        revert('Call the receivePayment method');
     }
 
     /**
-     * @dev Getter for the total shares held by payees.
+     * @dev Getter for the total shares held by payees[tokenId].
      */
-    function totalShares() public view checkShares returns (uint256) {
-        return _totalShares;
+    function totalShares(uint256 tokenId) public view checkShares(tokenId) returns (uint256) {
+        return _totalShares[tokenId];
     }
 
     /**
      * @dev Getter for the total amount of Ether already released.
      */
-    function totalReleased() public view checkShares returns (uint256) {
-        return _totalReleased;
+    function totalReleased(uint256 tokenId) public view checkShares(tokenId) returns (uint256) {
+        return _totalReleased[tokenId];
     }
 
     /**
      * @dev Getter for the amount of shares held by an account.
      */
-    function shares(address account) public view checkShares returns (uint256) {
-        return _shares[account];
+    function shares(uint256 tokenId, address account) public view checkShares(tokenId) returns (uint256) {
+        return _shares[tokenId][account];
     }
 
     /**
      * @dev Getter for the amount of Ether already released to a payee.
      */
-    function released(address account) public view checkShares returns (uint256) {
-        return _released[account];
+    function released(uint256 tokenId, address account) public view checkShares(tokenId) returns (uint256) {
+        return _released[tokenId][account];
     }
 
     /**
      * @dev Getter for the address of the payee number `index`.
      */
-    function payee(uint256 index) public view checkShares returns (address) {
-        return _payees[index];
+    function payee(uint256 tokenId, uint256 index) public view checkShares(tokenId) returns (address) {
+        return _payees[tokenId][index];
     }
 
     /**
       * @dev Returns payee shares and balance
       */
-    function payeeDetails(address account) public view checkShares returns (address, uint256, uint256) {
-        Payee memory p = payeeMapping[account];
+    function payeeDetails(uint256 tokenId, address account) public view checkShares(tokenId) returns (address, uint256, uint256) {
+        Payee memory p = payeeMapping[tokenId][account];
 
-        uint256 balance = (address(this).balance * p.shares / _totalShares) - p.released;
+        uint256 balance = (address(this).balance * p.shares / _totalShares[tokenId]) - p.released;
 
         return (p._address, uint256(p.shares), balance);
     }
@@ -139,19 +139,19 @@ contract PaymentSplitter is Context {
      * @dev Triggers a transfer to `account` of the amount of Ether they are owed, according to their percentage of the
      * total shares and their previous withdrawals.
      */
-    function release(address payable account) public virtual checkShares {
-        require(_shares[account] > 0, "PaymentSplitter: account has no shares");
+    function release(uint256 tokenId, address payable account) public virtual checkShares(tokenId) {
+        require(_shares[tokenId][account] > 0, "PaymentSplitter: account has no shares");
 
-        uint256 totalReceived = address(this).balance + _totalReleased;
-        uint256 payment = totalReceived * _shares[account] / _totalShares - _released[account];
+        uint256 totalReceived = address(this).balance + _totalReleased[tokenId];
+        uint256 payment = totalReceived * _shares[tokenId][account] / _totalShares[tokenId] - _released[tokenId][account];
 
         require(payment != 0, "PaymentSplitter: account is not due payment");
 
-        _released[account] = _released[account] + payment;
-        _totalReleased = _totalReleased + payment;
+        _released[tokenId][account] = _released[tokenId][account] + payment;
+        _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
 
         Address.sendValue(account, payment);
-        emit PaymentReleased(account, payment);
+        emit PaymentReleased(tokenId, account, payment);
     }
 
     /**
@@ -159,17 +159,17 @@ contract PaymentSplitter is Context {
      * @param account The address of the payee to add.
      * @param shares_ The number of shares owned by the payee.
      */
-    function _addPayee(address account, uint256 shares_) private {
+    function _addPayee(uint256 tokenId, address account, uint256 shares_) private {
         require(account != address(0), "PaymentSplitter: account is the zero address");
         require(shares_ > 0, "PaymentSplitter: shares are 0");
-        require(_shares[account] == 0, "PaymentSplitter: account already has shares");
+        require(_shares[tokenId][account] == 0, "PaymentSplitter: account already has shares");
 
-        _payees.push(account);
+        _payees[tokenId].push(account);
 
-        payeeMapping[account] = Payee(account, uint8(shares_), 0);
+        payeeMapping[tokenId][account] = Payee(account, uint8(shares_), 0);
 
-        _shares[account] = shares_;
-        _totalShares = _totalShares + shares_;
-        emit PayeeAdded(account, shares_);
+        _shares[tokenId][account] = shares_;
+        _totalShares[tokenId] = _totalShares[tokenId] + shares_;
+        emit PayeeAdded(tokenId, account, shares_);
     }
 }
