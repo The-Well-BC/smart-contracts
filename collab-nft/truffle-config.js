@@ -1,5 +1,10 @@
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 
+console.log('wallet keys:', {
+    mnemonic: process.env.MNEMONIC,
+    providerOrUrl: process.env.INFURA_ROPSTEN_API_KEY
+})
+
 module.exports = {
   /**
    * Networks define how you connect to your ethereum client and let you set the
@@ -14,6 +19,11 @@ module.exports = {
     networks: {
         development: {
             host: "127.0.0.1",
+            port: 8545,
+            network_id: "1337"
+        },
+        test: {
+            host: "127.0.0.1",
             port: 7545,
             network_id: "5777"
         },
@@ -21,10 +31,11 @@ module.exports = {
             provider: function() {
                 return new HDWalletProvider({
                     mnemonic: process.env.MNEMONIC,
-                    providerOrUrl: `https://ropsten.infura.io/v3/${ process.env.INFURA_ROPSTEN_API_KEY }`
+                    providerOrUrl: process.env.INFURA_ROPSTEN_API_KEY
                 })
             },
             network_id: 3,
+            networkCheckTimeout: 100000,
             gas: 8000000,
             gasPrice: 100000000000
         }
