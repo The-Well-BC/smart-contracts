@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "./PaymentSplitter.sol";
 
 
-/* smart contract that mints ntf to addresses that interact with it  */
-contract NFTShopFront is ERC1155, PaymentSplitter {
+/* The Well NFT contract */
+contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     struct Token{
-        uint256 supply;
         uint256 priceInEther;
+        address owner;
+        address[] collaborators;
     }
 
+    /* Used to set the tokenID of newly minted tokens */
+    uint256 nextTokenTracker;
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokenMappings;
+
+    string uriTemplate;
 
     mapping(uint256 => uint256) tokenPrice;
 
@@ -41,30 +47,33 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
      */
 
     constructor(
-        address _artist,
-        uint8 _artistCut,
-        address[] memory _collaborators,
-        uint256[] memory _collaboratorRewards,
-
+        string memory name_, string memory symbol_,
         string memory tokenURITemplate
-
-        // bytes32[] memory ipfsHashes
-    ) ERC1155(tokenURITemplate) {
-        setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
-        // _setURI(tokenURITemplate);
+    ) ERC721(name_, symbol_) {
+        // setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
+        setBaseURI(tokenURITemplate);
+        nextTokenTracker = 1;
     }
 
     /** @dev checks if function caller is the artist  */
-    modifier isArtist() {
+    modifier isArtist(uint256 tokenId) {
         require(
-            msg.sender == artist._address,
-            "You cannot change the art price, you are not the artist"
+            msg.sender == tokenMappings[tokenId].owner,
+            "Only the owner can change the price of this NFT"
         );
         _;
+    }
 
+    function setBaseURI(string memory uriTemplate_) internal {
+        uriTemplate = uriTemplate_;
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return uriTemplate;
     }
 
     function setShares(
+        uint256 tokenId,
         address _artistAddr, uint256 _artistCut,
         address[] memory _collaborators, uint256[] memory _collaboratorRewards
     ) internal {
@@ -86,24 +95,45 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
             payees[i] = _collaborators[h];
             shares[i] = _collaboratorRewards[h];
         }
-        artist = Collaborator(payable(_artistAddr), uint8(_artistCut), 0);
 
         // Call PaymentSplitter _setShares
-        _setShares(payees, shares);
+        _setShares(tokenId, payees, shares);
     }
 
     /**
-     * @dev Sale function for the shopfront
-     * @param _tokenID - ID of the token being sold
+      * @dev Mint function. Creates a new ERC721 token. _artist refers to the address minting the token
+      * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
+      * Will also set the token URI
+
+      * @param _artistCut Percentage of sales the minter gets.
+      * @param _collaborators Array of other collaborators that contributed to the art.
+      * @param _collaboratorRewards Array of percentage of sale that each collaborator gets.
+      */
+
+    function mint(
+        uint8 _artistCut,
+        address[] memory _collaborators,
+        uint256[] memory _collaboratorRewards,
+        string memory _tokenURI
+    ) public {
+        uint256 tokenId = nextTokenTracker;
+        tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
+        setShares(tokenId, msg.sender, _artistCut, _collaborators, _collaboratorRewards);
+
+        _safeMint(msg.sender, tokenId);
+
+        _setTokenURI(tokenId, _tokenURI);
+
+        nextTokenTracker++;
+    }
+
+    /**
+     * @dev Sale function for the NFT
+     * @param tokenId_ - ID of the token being sold
      */
-    function receiveEthAndMint(
-        uint256 _tokenID,
-        uint256 amount
+    function buyToken(
+        uint256 tokenId_
     ) external payable {
-        require(
-            amount > 0,
-            'You cannot mint 0 tokens'
-        );
         require(
             msg.value > 0,
             'Payment must be more than zero!'
@@ -111,7 +141,7 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
-            msg.value == tokenPrice[_tokenID],
+            msg.value == tokenPrice[tokenId_],
             "sent ether not equal to token price "
         );
         require(
@@ -121,30 +151,35 @@ contract NFTShopFront is ERC1155, PaymentSplitter {
         );
 
         /* Uee PaymentSplitter to handle payments */
-        receivePayment();
+        receivePayment(tokenId_);
 
-        _mint(msg.sender, _tokenID, amount, '');
+        // _safeMint(msg.sender, tokenId_, '');
+        // Should be transfer, not mint
     }
 
     event TokenPrice(uint256 ID, uint256 price);
 
     /* @notice Can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 tokenID, uint256 _ArtPrice) public isArtist {
+    function setPrice(uint256 tokenID, uint256 _ArtPrice) public isArtist(tokenID) {
         /* assign price in eth to art price */
         tokenPrice[tokenID] = _ArtPrice;
 
         emit TokenPrice(tokenID, _ArtPrice);
     }
 
-    function getCollaborators() external view returns(address[] memory) {
-        return _payees;
+    /**
+     * Returns addresses of creators of token. 
+     * @param tokenId_ ID of token
+     */
+    function tokenCreators(uint256 tokenId_) external view returns(address[] memory) {
+        return _payees[tokenId_];
     }
 
     /**
       * @notice - Returns collaborator address, collaborator share, collaborator balance
       */
-    function getCollaborator(address _address) external view returns(address, uint256, uint256) {
-        return payeeDetails(_address);
+    function getCollaborator(uint256 tokenId_, address _address) external view returns(address, uint256, uint256) {
+        return payeeDetails(tokenId_, _address);
     }
 }
 
