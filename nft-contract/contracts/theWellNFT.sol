@@ -1,27 +1,39 @@
-// SPDX-License-Identifier: UNLICENSED
+  // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "./openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "./PaymentSplitter.sol";
+import {SafeMath} from "./openzeppelin/contracts//utils/math/SafeMath.sol";
+import {IMarket} from "./IMarket.sol";
+import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
 /* The Well NFT contract */
-contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
-    struct Token{
+contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
+    struct Token {
         uint256 priceInEther;
         address owner;
         address[] collaborators;
     }
 
+  /* auction contract address    */
+  address auctionContract;
+
+  // well admin adress
+  address wellAdmin;
+
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
+
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokenMappings;
-
+ 
     string uriTemplate;
 
     mapping(uint256 => uint256) tokenPrice;
+
+    mapping (uint256 => bool) priceIsSet;
 
     struct Collaborator {
         address payable _address;
@@ -47,8 +59,9 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
      */
 
     constructor(
-        string memory name_, string memory symbol_,
-        string memory tokenURITemplate
+        string memory name_,
+        string memory symbol_,
+        string memory tokenURITemplate 
     ) ERC721(name_, symbol_) {
         // setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
         setBaseURI(tokenURITemplate);
@@ -59,10 +72,44 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     modifier isArtist(uint256 tokenId) {
         require(
             msg.sender == tokenMappings[tokenId].owner,
-            "Only the owner can change the price of this NFT"
+            "Only the lead artist can call this function"
         );
         _;
     }
+
+        /**
+     * @notice Ensure that the provided spender is the approved or the owner of
+     * the media for the specified tokenId
+     */
+    modifier onlyApprovedOrOwner(address spender, uint256 tokenId) {
+        require(
+            _isApprovedOrOwner(spender, tokenId),
+            "Media: Only approved or owner"
+        );
+        _;
+    }
+
+    /**
+     * @notice Require that the token has not been burned and has been minted
+     */
+    modifier onlyExistingToken(uint256 tokenId) {
+        require(_exists(tokenId), "Media: nonexistent token");
+        _;
+    }
+
+    modifier isWellAdmin( address msgSENDER) {
+        require(msgSENDER == wellAdmin, 'msg.sender not the well Admin address');
+        _;
+    }
+
+     function changeWellAdmin(address _wellAdmin) public isWellAdmin(msg.sender){
+       wellAdmin = _wellAdmin;
+   }
+   
+    function setAuctionContract(address _auctionContract) public isWellAdmin(msg.sender){
+       auctionContract = _auctionContract;
+   }
+   
 
     function setBaseURI(string memory uriTemplate_) internal {
         uriTemplate = uriTemplate_;
@@ -74,12 +121,14 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
 
     function setShares(
         uint256 tokenId,
-        address _artistAddr, uint256 _artistCut,
-        address[] memory _collaborators, uint256[] memory _collaboratorRewards
+        address _artistAddr,
+        uint256 _artistCut,
+        address[] memory _collaborators,
+        uint256[] memory _collaboratorRewards
     ) internal {
         require(
             _collaborators.length <= 10,
-            'Cannot have more than 10 collaborators'
+            "Cannot have more than 10 collaborators"
         );
 
         // Artist is always first collaborator
@@ -118,7 +167,13 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     ) public {
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
-        setShares(tokenId, msg.sender, _artistCut, _collaborators, _collaboratorRewards);
+        setShares(
+            tokenId,
+            msg.sender,
+            _artistCut,
+            _collaborators,
+            _collaboratorRewards
+        );
 
         _safeMint(msg.sender, tokenId);
 
@@ -131,13 +186,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
      * @dev Sale function for the NFT
      * @param tokenId_ - ID of the token being sold
      */
-    function buyToken(
-        uint256 tokenId_
-    ) external payable {
-        require(
-            msg.value > 0,
-            'Payment must be more than zero!'
-        );
+    function buyToken(uint256 tokenId_) external payable {
+        require(priceIsSet[tokenId_]== true, "token price not yet set ");
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
@@ -147,7 +197,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         require(
             /* Should not fail here. Checks that total collaborators is at most ten */
             collaborators.length <= 10,
-            'Error minting NFT. Too many collaborators. Please contact contract creator'
+            "Error minting NFT. Too many collaborators. Please contact contract creator"
         );
 
         /* Uee PaymentSplitter to handle payments */
@@ -160,26 +210,87 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     event TokenPrice(uint256 ID, uint256 price);
 
     /* @notice Can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 tokenID, uint256 _ArtPrice) public isArtist(tokenID) {
+    function setPrice(uint256 tokenID, uint256 _ArtPrice)
+        public
+        isArtist(tokenID)
+    {
         /* assign price in eth to art price */
         tokenPrice[tokenID] = _ArtPrice;
-
+        IMarket AuctionContract = IMarket(auctionContract);
+        AuctionContract.setAsk( tokenID, _ArtPrice, AuctionContract.getWETH() );
+        priceIsSet[tokenID] = true;
         emit TokenPrice(tokenID, _ArtPrice);
     }
 
     /**
-     * Returns addresses of creators of token. 
+     * Returns addresses of creators of token.
      * @param tokenId_ ID of token
      */
-    function tokenCreators(uint256 tokenId_) external view returns(address[] memory) {
+    function tokenCreators(uint256 tokenId_)
+        external
+        view
+        returns (address[] memory)
+    {
         return _payees[tokenId_];
     }
 
     /**
-      * @notice - Returns collaborator address, collaborator share, collaborator balance
-      */
-    function getCollaborator(uint256 tokenId_, address _address) external view returns(address, uint256, uint256) {
+     * @notice - Returns collaborator address, collaborator share, collaborator balance
+     */
+    function getCollaborator(uint256 tokenId_, address _address)
+        external
+        view
+        returns (
+            address,
+            uint256,
+            uint256
+        )
+    {
         return payeeDetails(tokenId_, _address);
+    }
+
+    // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
+    function setReleaseTime( uint tokenID, uint _time) public  isArtist(tokenID)    nonReentrant
+    onlyExistingToken(tokenID) {
+        uint releaseTime =  block.timestamp + _time;
+        ReleaseTime[tokenID] = releaseTime;
+    }
+
+
+    function getTokenReleaseTime( uint tokenID) public view returns(uint){
+       return ReleaseTime[tokenID];
+    }
+
+// function removes ask and unsets price 
+    function removeAsk(uint256 tokenId) public isArtist(tokenId)    nonReentrant
+    onlyExistingToken(tokenId) {
+        priceIsSet[tokenId] = false;
+        IMarket AuctionContract = IMarket(auctionContract);
+        AuctionContract.removeAsk(tokenId);
+    }
+
+    function removeBid(uint256 tokenId) public    nonReentrant
+    onlyExistingToken(tokenId){
+        address bidder = msg.sender;
+        IMarket AuctionContract = IMarket(auctionContract);
+        AuctionContract.removeBid(tokenId, bidder);
+    }
+
+    function acceptBid(uint256 tokenId, IMarket.Bid memory bid)
+        public
+        nonReentrant
+        onlyApprovedOrOwner(msg.sender, tokenId)
+    {
+        IMarket(auctionContract).acceptBid(tokenId, bid);
+    }
+
+    function createBid(uint256 tokenId, IMarket.Bid memory bid)
+    public
+    nonReentrant
+    onlyExistingToken(tokenId)
+    {
+    require(msg.sender == bid.bidder, "Market: Bidder must be msg sender");
+    IMarket(auctionContract).createBid(tokenId, bid, msg.sender);
     }
 }
 
