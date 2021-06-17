@@ -1,4 +1,4 @@
-  // SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
 import "./openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -8,32 +8,31 @@ import {SafeMath} from "./openzeppelin/contracts//utils/math/SafeMath.sol";
 import {IMarket} from "./IMarket.sol";
 import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-
 /* The Well NFT contract */
-contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
+contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
     struct Token {
         uint256 priceInEther;
         address owner;
         address[] collaborators;
     }
 
-  /* auction contract address    */
-  address auctionContract;
+    /* auction contract address    */
+    address auctionContract;
 
-  // well admin adress
-  address wellAdmin;
+    // well admin adress
+    address wellAdmin;
 
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
 
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokenMappings;
- 
+
     string uriTemplate;
 
     mapping(uint256 => uint256) tokenPrice;
 
-    mapping (uint256 => bool) priceIsSet;
+    mapping(uint256 => bool) priceIsSet;
 
     struct Collaborator {
         address payable _address;
@@ -61,7 +60,7 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
     constructor(
         string memory name_,
         string memory symbol_,
-        string memory tokenURITemplate 
+        string memory tokenURITemplate
     ) ERC721(name_, symbol_) {
         // setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
         setBaseURI(tokenURITemplate);
@@ -77,7 +76,7 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
         _;
     }
 
-        /**
+    /**
      * @notice Ensure that the provided spender is the approved or the owner of
      * the media for the specified tokenId
      */
@@ -97,19 +96,27 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
         _;
     }
 
-    modifier isWellAdmin( address msgSENDER) {
-        require(msgSENDER == wellAdmin, 'msg.sender not the well Admin address');
+    modifier isWellAdmin(address msgSENDER) {
+        require(
+            msgSENDER == wellAdmin,
+            "msg.sender not the well Admin address"
+        );
         _;
     }
 
-     function changeWellAdmin(address _wellAdmin) public isWellAdmin(msg.sender){
-       wellAdmin = _wellAdmin;
-   }
-   
-    function setAuctionContract(address _auctionContract) public isWellAdmin(msg.sender){
-       auctionContract = _auctionContract;
-   }
-   
+    function changeWellAdmin(address _wellAdmin)
+        public
+        isWellAdmin(msg.sender)
+    {
+        wellAdmin = _wellAdmin;
+    }
+
+    function setAuctionContract(address _auctionContract)
+        public
+        isWellAdmin(msg.sender)
+    {
+        auctionContract = _auctionContract;
+    }
 
     function setBaseURI(string memory uriTemplate_) internal {
         uriTemplate = uriTemplate_;
@@ -186,8 +193,10 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
      * @dev Sale function for the NFT
      * @param tokenId_ - ID of the token being sold
      */
+
+    //use this function to make sale in ether only
     function buyToken(uint256 tokenId_) external payable {
-        require(priceIsSet[tokenId_]== true, "token price not yet set ");
+        require(priceIsSet[tokenId_] == true, "token price not yet set ");
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
@@ -200,6 +209,9 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
             "Error minting NFT. Too many collaborators. Please contact contract creator"
         );
 
+        // remove ask and unset the token price 
+        priceIsSet[tokenId_] = false;
+        IMarket(auctionContract).removeAsk(tokenId_);
         /* Uee PaymentSplitter to handle payments */
         receivePayment(tokenId_);
 
@@ -217,7 +229,7 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
         /* assign price in eth to art price */
         tokenPrice[tokenID] = _ArtPrice;
         IMarket AuctionContract = IMarket(auctionContract);
-        AuctionContract.setAsk( tokenID, _ArtPrice, AuctionContract.getWETH() );
+        AuctionContract.setAsk(tokenID, _ArtPrice, AuctionContract.getWETH());
         priceIsSet[tokenID] = true;
         emit TokenPrice(tokenID, _ArtPrice);
     }
@@ -250,27 +262,41 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
     }
 
     // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
-    function setReleaseTime( uint tokenID, uint _time) public  isArtist(tokenID)    nonReentrant
-    onlyExistingToken(tokenID) {
-        uint releaseTime =  block.timestamp + _time;
+    function setReleaseTime(uint256 tokenID, uint256 _time)
+        public
+        isArtist(tokenID)
+        nonReentrant
+        onlyExistingToken(tokenID)
+    {
+        uint256 releaseTime = block.timestamp + _time;
         ReleaseTime[tokenID] = releaseTime;
     }
 
-
-    function getTokenReleaseTime( uint tokenID) public view returns(uint){
-       return ReleaseTime[tokenID];
+    function getTokenReleaseTime(uint256 tokenID)
+        public
+        view
+        returns (uint256)
+    {
+        return ReleaseTime[tokenID];
     }
 
-// function removes ask and unsets price 
-    function removeAsk(uint256 tokenId) public isArtist(tokenId)    nonReentrant
-    onlyExistingToken(tokenId) {
+    // function removes ask and unsets price
+    function removeAsk(uint256 tokenId)
+        public
+        isArtist(tokenId)
+        nonReentrant
+        onlyExistingToken(tokenId)
+    {
         priceIsSet[tokenId] = false;
         IMarket AuctionContract = IMarket(auctionContract);
         AuctionContract.removeAsk(tokenId);
     }
 
-    function removeBid(uint256 tokenId) public    nonReentrant
-    onlyExistingToken(tokenId){
+    function removeBid(uint256 tokenId)
+        public
+        nonReentrant
+        onlyExistingToken(tokenId)
+    {
         address bidder = msg.sender;
         IMarket AuctionContract = IMarket(auctionContract);
         AuctionContract.removeBid(tokenId, bidder);
@@ -285,12 +311,11 @@ contract TheWellNFT is ERC721URIStorage,PaymentSplitter, ReentrancyGuard  {
     }
 
     function createBid(uint256 tokenId, IMarket.Bid memory bid)
-    public
-    nonReentrant
-    onlyExistingToken(tokenId)
+        public
+        nonReentrant
+        onlyExistingToken(tokenId)
     {
-    require(msg.sender == bid.bidder, "Market: Bidder must be msg sender");
-    IMarket(auctionContract).createBid(tokenId, bid, msg.sender);
+        require(msg.sender == bid.bidder, "Market: Bidder must be msg sender");
+        IMarket(auctionContract).createBid(tokenId, bid, msg.sender);
     }
 }
-
