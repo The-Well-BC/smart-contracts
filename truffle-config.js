@@ -9,8 +9,8 @@ module.exports = {
         },
         test: {
             host: '127.0.0.1',
-            port: 9545,
-            network_id: 1337
+            port: 7545,
+            network_id: 5777
         },
         /*
         develop: {
@@ -24,7 +24,7 @@ module.exports = {
             provider: function() {
                 return new HDWalletProvider({
                     mnemonic: process.env.MNEMONIC,
-                    providerOrUrl: `https://ropsten.infura.io/v3/${ process.env.INFURA_ROPSTEN_API_KEY }`
+                    providerOrUrl: process.env.INFURA_ROPSTEN_API_KEY
                 })
             },
             network_id: 3,
