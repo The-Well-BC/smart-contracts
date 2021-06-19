@@ -10,7 +10,7 @@ const WellTokenContract = artifacts.require('Well');
 
 const WhitelistCrowdsale = artifacts.require('CollectorCrowdsale');
 
-contract.only('Crowdsale: Sell tokens', function(accounts) {
+contract('Crowdsale: Sell tokens', function(accounts) {
     let crowdsale;
     // 1 $WELL = 25 ETH
     let packages = [{

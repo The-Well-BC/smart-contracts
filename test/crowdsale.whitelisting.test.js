@@ -10,7 +10,7 @@ const WellTokenContract = artifacts.require('Well');
 
 const WhitelistCrowdsale = artifacts.require('CollectorCrowdsale');
 
-contract('Crowdsale: Test Whitelisting', function(accounts) {
+contract.skip('Crowdsale: Test Whitelisting', function(accounts) {
     let packageIDs = [];
     let whitelistedBuyers = [
         accounts[4],
