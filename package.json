@@ -15,7 +15,6 @@
     "verify-contracts:ropsten": ". ./.env.local && truffle run verify Well@0x41b366b7803D9157812EdEd524272F153683D719 --network ropsten",
     "test:contracts": "nodemon -e js,sol --ignore 'client/' --exec 'truffle test --network test --show-events'",
     "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
-    "ropsten:migrate:reset": ". ./.env.local && npx truffle migrate --reset --network ropsten",
     "ropsten:console": ". ./.env.local && npx truffle console --network ropsten"
   },
   "devDependencies": {
