@@ -7,7 +7,7 @@ import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Decimal} from "./Decimal.sol";
-import {TheWellNFT} from "./TheWellNFT.sol";
+import {TheWellNFT} from "./theWellNFT.sol";
 import {IMarket} from "./IMarket.sol";
 import {SafeMath} from "@openzeppelin/contracts//utils/math/SafeMath.sol";
 import "./PaymentSplitter.sol";

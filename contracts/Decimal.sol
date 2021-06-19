@@ -11,7 +11,7 @@
     limitations under the License.
 */
 
-pragma solidity 0.8.0;
+pragma solidity 0.8.4;
 pragma experimental ABIEncoderV2;
 
 /**
