@@ -354,6 +354,12 @@ contract theWellAuctionContract is IMarket {
         require(bid.currency == WETH, "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
+        // Check if its a secondary sale. If it is, check ReleaseTime has passed
+        if(bidShares.creator != bidShares.owner) {
+            require( ReleaseTime[tokenID] <= block.timestamp, 'TOKEN: token lock up period not over!');
+
+        }
+
         address[] memory addressOfCreators =
             TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
         uint256 creatorShare = splitShare(bidShares.creator, bid.amount);
