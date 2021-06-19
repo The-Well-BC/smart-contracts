@@ -30,6 +30,7 @@ yarn-error.log*
 abis/
 build/
 binary/
+/bin
 bin/
 openzeppelin/
 artifacts/
