@@ -22,6 +22,9 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
     /* auction contract address    */
     address auctionContract;
 
+    // Release Time for timelocked NFTs
+    mapping(uint256 => uint256) internal ReleaseTime;
+
     // well admin adress
     address wellAdmin;
 
