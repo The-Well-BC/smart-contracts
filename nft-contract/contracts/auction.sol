@@ -3,13 +3,14 @@ pragma experimental ABIEncoderV2;
 
 import {IERC721} from "./openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "./openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    SafeERC20
+} from "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Decimal} from "./Decimal.sol";
 import {TheWellNFT} from "./TheWellNFT.sol";
 import {IMarket} from "./IMarket.sol";
 import {SafeMath} from "./openzeppelin/contracts//utils/math/SafeMath.sol";
 import "./PaymentSplitter.sol";
-
 
 contract theWellAuctionContract is IMarket {
     using SafeMath for uint256;
@@ -22,10 +23,13 @@ contract theWellAuctionContract is IMarket {
     // Address of the media contract that can call this market
     address payable public TheWellNFTContract;
 
+    // Mapping from token ID to previous owner address
+    mapping (uint256 => address) private _previousOwner;
+
     // WETH contract address
     address public WETH;
 
-    // address that can call admin functions 
+    // address that can call admin functions
     address private _owner;
 
     // Mapping from tokenID to mapping from bidder to bid
@@ -37,7 +41,10 @@ contract theWellAuctionContract is IMarket {
     // Mapping from token to the current ask for the token
     mapping(uint256 => Ask) private _tokenAsks;
 
-    /* ********* 
+    //mapping of token ID to bool value for tracking of secondary sales
+    mapping(uint256 => bool) private secondarySale;
+
+    /* *********
      * Modifiers
      * *********
      */
@@ -46,21 +53,27 @@ contract theWellAuctionContract is IMarket {
      * @notice require that the msg.sender is the configured media contract
      */
     modifier onlyMediaCaller() {
-        require(TheWellNFTContract == msg.sender, "Market: Only media contract");
+        require(
+            TheWellNFTContract == msg.sender,
+            "Market: Only media contract"
+        );
         _;
     }
 
-    constructor ( address _WETH, address OWNER) {
+    constructor(address _WETH, address OWNER) {
         WETH = _WETH;
         _owner = OWNER;
     }
 
-    function changeWETHaddress( address _WETH) public {
-        require( msg.sender == _owner, 'Permission denied; CALLER ADDRESS NOT OWNER');
+    function changeWETHaddress(address _WETH) public {
+        require(
+            msg.sender == _owner,
+            "Permission denied; CALLER ADDRESS NOT OWNER"
+        );
         WETH = _WETH;
     }
 
-    function getWETH() public view override returns(address) {
+    function getWETH() public view override returns (address) {
         return WETH;
     }
 
@@ -72,11 +85,10 @@ contract theWellAuctionContract is IMarket {
             "Market: cannot set media contract as zero address"
         );
 
-
         TheWellNFTContract = theWellNFTContract;
     }
 
-        function currentAskForToken(uint256 tokenId)
+    function currentAskForToken(uint256 tokenId)
         external
         view
         override
@@ -84,7 +96,6 @@ contract theWellAuctionContract is IMarket {
     {
         return _tokenAsks[tokenId];
     }
-
 
     function bidSharesForToken(uint256 tokenId)
         public
@@ -95,7 +106,7 @@ contract theWellAuctionContract is IMarket {
         return _bidShares[tokenId];
     }
 
-        /**
+    /**
      * @notice Sets bid shares for a particular tokenId. These bid shares must
      * sum to 100.
      */
@@ -145,6 +156,7 @@ contract theWellAuctionContract is IMarket {
     {
         return _tokenBidders[tokenId][bidder];
     }
+
     /**
      * @notice Validates that the provided bid shares sum to 100
      */
@@ -159,6 +171,7 @@ contract theWellAuctionContract is IMarket {
                 bidShares.prevOwner.value
             ) == uint256(100).mul(Decimal.BASE);
     }
+
     /**
      * @notice return a % of the specified amount. This function is used to split a bid into shares
      * for a media's shareholders.
@@ -198,21 +211,25 @@ contract theWellAuctionContract is IMarket {
         delete _tokenBidders[tokenId][bidder];
         token.safeTransfer(bidder, bidAmount);
     }
+
     /**
      * @notice Sets the ask on a particular media. If the ask cannot be evenly split into the media's
      * bid shares, this reverts.
      */
-    function setAsk(uint256 tokenId, uint amount, address currency)
-        public
-        override
-        onlyMediaCaller
-    {
+    function setAsk(
+        uint256 tokenId,
+        uint256 amount,
+        address currency
+    ) public override onlyMediaCaller {
         require(
             isValidBid(tokenId, amount),
             "Market: Ask invalid for share splitting"
         );
 
-        require (currency == WETH, 'Market: invalid  Ask currency set, only use WETH address');
+        require(
+            currency == WETH,
+            "Market: invalid  Ask currency set, only use WETH address"
+        );
         Ask memory ask;
         ask.amount = amount;
         ask.currency = currency;
@@ -221,7 +238,12 @@ contract theWellAuctionContract is IMarket {
         emit AskCreated(tokenId, ask);
     }
 
+    //get address of previous owner of token
 
+    function previousOwner(uint tokenID) public view returns (address) {
+        require( _previousOwner[tokenID] != address(0), "ERC721: previous owner query gives invalid address");
+        return _previousOwner[tokenID]; 
+    }
 
     //let buyers create bids
 
@@ -329,40 +351,84 @@ contract theWellAuctionContract is IMarket {
         Bid memory bid = _tokenBidders[tokenId][bidder];
         BidShares storage bidShares = _bidShares[tokenId];
 
-        require (bid.currency == WETH, 'MARKET: Invalid bid currency');
+        require(bid.currency == WETH, "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
-        // Transfer bid share to owner of media
-        token.safeTransfer(
-            IERC721(TheWellNFTContract).ownerOf(tokenId),
-            splitShare(bidShares.owner, bid.amount)
-        );
+        address[] memory addressOfCreators =
+            TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
+        uint256 creatorShare = splitShare(bidShares.creator, bid.amount);
 
-        // Transfer bid share to creator/ceators of media
-        address [] memory addressOfCreators = TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
-        uint creatorShare = splitShare(bidShares.creator, bid.amount);
-        for ( uint i = 0; i < addressOfCreators.length; i++){
-
-            //CALL PAYMENT SPLITTER MAPPING TO GET SHARING PORTIONS FOR THE creator and COLLABORATORS if any
-            uint creatorOrcollaboratorShare =  TheWellNFT(TheWellNFTContract).shares(tokenId, addressOfCreators[i]);
-
-            //calculate percentage for  this collaborator
-            uint reward = creatorOrcollaboratorShare * creatorShare / 100 ;
-       
+        if (secondarySale[tokenId] == true) {
+            // Transfer bid share to owner of media
             token.safeTransfer(
-            addressOfCreators[i],
-            reward
-           );
-        }
-        
-        // Transfer bid share to previous owner of media (if applicable)
-        token.safeTransfer(
-            TheWellNFT(TheWellNFTContract).previousOwner(tokenId),
-            splitShare(bidShares.prevOwner, bid.amount)
-        );
+                IERC721(TheWellNFTContract).ownerOf(tokenId),
+                splitShare(bidShares.owner, bid.amount)
+            );
 
-        // Transfer media to bid recipient
-        TheWellNFT(TheWellNFTContract).transfer( bid.recipient, tokenId);
+            // Transfer bid share to creator/ceators of media
+            for (uint256 i = 0; i < addressOfCreators.length; i++) {
+                //CALL PAYMENT SPLITTER MAPPING TO GET SHARING PORTIONS FOR THE creator and COLLABORATORS if any
+                uint256 creatorOrcollaboratorShare =
+                    TheWellNFT(TheWellNFTContract).shares(
+                        tokenId,
+                        addressOfCreators[i]
+                    );
+
+                //calculate percentage for  this collaborator
+                uint256 reward =
+                    (creatorOrcollaboratorShare * creatorShare) / 100;
+
+                token.safeTransfer(addressOfCreators[i], reward);
+            }
+
+            // Transfer bid share to previous owner of media
+            if (_previousOwner[tokenId] != address(0)){
+            token.safeTransfer(
+                _previousOwner[tokenId],
+                splitShare(bidShares.prevOwner, bid.amount)
+            );
+            } 
+
+
+
+            //set previous owner, turn current nft owner to previous owner then transfer out  
+             _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
+
+            // Transfer media to bid recipient
+            TheWellNFT(TheWellNFTContract).safeTransferFrom(
+                IERC721(TheWellNFTContract).ownerOf(tokenId),
+                bid.recipient,
+                tokenId
+            );
+        } else {
+
+            for (uint256 i = 0; i < addressOfCreators.length; i++) {
+                //CALL PAYMENT SPLITTER MAPPING TO GET SHARING PORTIONS FOR THE creator and COLLABORATORS if any
+                uint256 creatorOrcollaboratorShare =
+                    TheWellNFT(TheWellNFTContract).shares(
+                        tokenId,
+                        addressOfCreators[i]
+                    );
+
+                //calculate percentage for  this collaborator
+                uint256 reward =
+                    (creatorOrcollaboratorShare * bid.amount) / 100;
+
+                token.safeTransfer(addressOfCreators[i], reward);
+            }
+                //set previous owner 
+                _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
+
+                // Transfer media to bid recipient
+                TheWellNFT(TheWellNFTContract).safeTransferFrom(
+                    IERC721(TheWellNFTContract).ownerOf(tokenId),
+                    bid.recipient,
+                    tokenId
+                );
+
+                // mark first sale as done by makiing secondarySale mapping true
+                secondarySale[tokenId] = true;
+        }
 
         // Calculate the bid share for the new owner,
         // equal to 100 - creatorShare - sellOnShare
