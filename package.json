@@ -12,6 +12,7 @@
 
     "test-chain": "ganache-cli --defaultBalanceEther 90000000000000000000 -i 1337 -p 9545",
     "dev-chain": "ganache-cli --defaultBalanceEther 900 -i 1337 -p 8545 -m 'much lend accuse door can mixture original orient journey spice afraid wire'",
+    "verify-contracts:ropsten": ". ./.env.local && truffle run verify Well@0x41b366b7803D9157812EdEd524272F153683D719 --network ropsten",
     "test:contracts": "nodemon -e js,sol --ignore 'client/' --exec 'truffle test --network test --show-events'",
     "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
     "ropsten:migrate:reset": ". ./.env.local && npx truffle migrate --reset --network ropsten",
