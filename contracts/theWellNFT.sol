@@ -3,11 +3,13 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+// import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "./PaymentSplitter.sol";
 
 
 /* The Well NFT contract */
 contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
+// contract TheWellNFT is ERC721URIStorage, ERC721Enumerable, PaymentSplitter {
     struct Token{
         uint256 priceInEther;
         address owner;
