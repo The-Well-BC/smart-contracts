@@ -59,7 +59,6 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
     /**
      * @notice Sets collaboratrs, artist, and artist/collaborator cuts
      */
-
     constructor(
         string memory name_,
         string memory symbol_,
@@ -107,15 +106,13 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         _;
     }
 
-    function changeWellAdmin(address _wellAdmin)
-        public
+    function changeWellAdmin(address _wellAdmin) public
         isWellAdmin(msg.sender)
     {
         wellAdmin = _wellAdmin;
     }
 
-    function setAuctionContract(address _auctionContract)
-        public
+    function setAuctionContract(address _auctionContract) public
         isWellAdmin(msg.sender)
     {
         auctionContract = _auctionContract;
@@ -177,13 +174,9 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
     ) public {
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
-        setShares(
-            tokenId,
-            msg.sender,
-            _artistCut,
-            _collaborators,
-            _collaboratorRewards
-        );
+
+        setShares(tokenId, msg.sender, _artistCut,
+            _collaborators, _collaboratorRewards);
 
         _safeMint(msg.sender, tokenId);
 
