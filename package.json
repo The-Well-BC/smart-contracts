@@ -1,0 +1,28 @@
+{
+  "name": "the-well-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
+    "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ --abi contracts/*.sol -o abis --overwrite",
+    "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
+    "ropsten:console": ". ./.env.local && npx truffle console --network ropsten",
+    "verify-contracts:ropsten": ". ./.env.local && truffle run verify Well@0x41b366b7803D9157812EdEd524272F153683D719 --network ropsten"
+  },
+  "dependencies": {
+    "@ensdomains/ens-contracts": "^0.0.4",
+    "@ethereum-waffle/ens": "^3.3.0",
+    "@ethereum-waffle/provider": "^3.4.0",
+    "@openzeppelin/contracts": "^4.1.0",
+    "@truffle/hdwallet-provider": "1.2.3",
+    "openzeppelin-2.5": "npm:@openzeppelin/contracts@v2.5"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^3.0.0",
+    "eth-ens-namehash": "^2.0.8",
+    "nodemon": "^2.0.7",
+    "truffle-plugin-verify": "^0.5.9"
+  }
+}
