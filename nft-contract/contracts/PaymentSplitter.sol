@@ -43,7 +43,7 @@ contract PaymentSplitter is Context {
     modifier checkShares(uint256 tokenId) {
         require(
             _payees[tokenId].length > 0,
-            "PaymentSplitter: You have to set the payees and their share percentages first. Use _setShares()"
+            "PaymentSplitter: no shares set, use _setShares()"
         );
         _;
     }
@@ -195,7 +195,7 @@ contract PaymentSplitter is Context {
                 _totalShares[tokenId] -
                 _released[tokenId][account];
 
-        require(payment != 0, "PaymentSplitter: account is not due payment");
+        require(payment != 0, "PaymentSplitter: account not due payment");
 
         _released[tokenId][account] = _released[tokenId][account] + payment;
         _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
@@ -216,7 +216,7 @@ contract PaymentSplitter is Context {
     ) private {
         require(
             account != address(0),
-            "PaymentSplitter: account is the zero address"
+            "PaymentSplitter: account is zero address"
         );
         require(shares_ > 0, "PaymentSplitter: shares are 0");
         require(

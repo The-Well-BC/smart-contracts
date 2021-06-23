@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
-import "./openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "./openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "./ERC721URIStorage.sol";
 import "./PaymentSplitter.sol";
-import {SafeMath} from "./openzeppelin/contracts//utils/math/SafeMath.sol";
+import "./ERC721.sol";
 import {IMarket} from "./IMarket.sol";
 import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -99,7 +98,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
     modifier isWellAdmin(address msgSENDER) {
         require(
             msgSENDER == wellAdmin,
-            "msg.sender not the well Admin address"
+            "msg.sender not the well Admin add"
         );
         _;
     }
@@ -135,7 +134,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
     ) internal {
         require(
             _collaborators.length <= 10,
-            "Cannot have more than 10 collaborators"
+            "Cannot have + 10 collaborators"
         );
 
         // Artist is always first collaborator
@@ -196,17 +195,17 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
 
     //use this function to make sale in ether only
     function buyToken(uint256 tokenId_) external payable {
-        require(priceIsSet[tokenId_] == true, "token price not yet set ");
+        require(priceIsSet[tokenId_] == true, "token price not set ");
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
             msg.value == tokenPrice[tokenId_],
-            "sent ether not equal to token price "
+            "sent ether not token price "
         );
         require(
             /* Should not fail here. Checks that total collaborators is at most ten */
             collaborators.length <= 10,
-            "Error minting NFT. Too many collaborators. Please contact contract creator"
+            "Error minting NFT,too many collaborators"
         );
 
         // remove ask and unset the token price 
@@ -261,61 +260,5 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
         return payeeDetails(tokenId_, _address);
     }
 
-    // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
-    function setReleaseTime(uint256 tokenID, uint256 _time)
-        public
-        isArtist(tokenID)
-        nonReentrant
-        onlyExistingToken(tokenID)
-    {
-        uint256 releaseTime = block.timestamp + _time;
-        ReleaseTime[tokenID] = releaseTime;
-    }
 
-    function getTokenReleaseTime(uint256 tokenID)
-        public
-        view
-        returns (uint256)
-    {
-        return ReleaseTime[tokenID];
-    }
-
-    // function removes ask and unsets price
-    function removeAsk(uint256 tokenId)
-        public
-        isArtist(tokenId)
-        nonReentrant
-        onlyExistingToken(tokenId)
-    {
-        priceIsSet[tokenId] = false;
-        IMarket AuctionContract = IMarket(auctionContract);
-        AuctionContract.removeAsk(tokenId);
-    }
-
-    function removeBid(uint256 tokenId)
-        public
-        nonReentrant
-        onlyExistingToken(tokenId)
-    {
-        address bidder = msg.sender;
-        IMarket AuctionContract = IMarket(auctionContract);
-        AuctionContract.removeBid(tokenId, bidder);
-    }
-
-    function acceptBid(uint256 tokenId, IMarket.Bid memory bid)
-        public
-        nonReentrant
-        onlyApprovedOrOwner(msg.sender, tokenId)
-    {
-        IMarket(auctionContract).acceptBid(tokenId, bid);
-    }
-
-    function createBid(uint256 tokenId, IMarket.Bid memory bid)
-        public
-        nonReentrant
-        onlyExistingToken(tokenId)
-    {
-        require(msg.sender == bid.bidder, "Market: Bidder must be msg sender");
-        IMarket(auctionContract).createBid(tokenId, bid, msg.sender);
-    }
 }
