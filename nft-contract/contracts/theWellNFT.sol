@@ -6,6 +6,7 @@ import "./PaymentSplitter.sol";
 import "./ERC721.sol";
 import {IMarket} from "./IMarket.sol";
 import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Decimal} from "./Decimal.sol";
 
 /* The Well NFT contract */
 contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
@@ -169,8 +170,11 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
         uint8 _artistCut,
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards,
-        string memory _tokenURI
-    ) public {
+        string memory _tokenURI,
+        uint _prevOwner,
+        uint _owner,
+        uint _creator
+    ) public nonReentrant {
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
         setShares(
@@ -180,11 +184,13 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
             _collaborators,
             _collaboratorRewards
         );
+        Decimal.D256 memory prevOwner =  Decimal.D256(_prevOwner * 10**18);
+        Decimal.D256 memory owner =  Decimal.D256(_owner * 10**18);
+        Decimal.D256 memory creator =  Decimal.D256(_creator * 10**18);
+        IMarket(auctionContract).setBidShares(tokenId, prevOwner, owner, creator);
 
         _safeMint(msg.sender, tokenId);
-
         _setTokenURI(tokenId, _tokenURI);
-
         nextTokenTracker++;
     }
 
@@ -194,13 +200,13 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
      */
 
     //use this function to make sale in ether only
-    function buyToken(uint256 tokenId_) external payable {
+    function buyToken(uint256 tokenId_) external payable nonReentrant {
         require(priceIsSet[tokenId_] == true, "token price not set ");
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
             msg.value == tokenPrice[tokenId_],
-            "sent ether not token price "
+            "sent ether not token price"
         );
         require(
             /* Should not fail here. Checks that total collaborators is at most ten */
@@ -224,6 +230,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
     function setPrice(uint256 tokenID, uint256 _ArtPrice)
         public
         isArtist(tokenID)
+        nonReentrant
     {
         /* assign price in eth to art price */
         tokenPrice[tokenID] = _ArtPrice;
@@ -258,6 +265,25 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
         )
     {
         return payeeDetails(tokenId_, _address);
+    }
+
+        // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
+    function setReleaseTime(uint256 tokenID, uint256 _time)
+        public
+        isArtist(tokenID)
+        nonReentrant
+        onlyExistingToken(tokenID)
+    {
+        uint256 releaseTime = block.timestamp + _time;
+        ReleaseTime[tokenID] = releaseTime;
+    }
+
+    function getTokenReleaseTime(uint256 tokenID)
+        public
+        view
+        returns (uint256)
+    {
+        return ReleaseTime[tokenID];
     }
 
 

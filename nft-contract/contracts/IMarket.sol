@@ -80,7 +80,7 @@ interface IMarket {
 
     function configure(address payable theWellNFTContract) external;
 
-    function setBidShares(uint256 tokenId, BidShares calldata bidShares)
+    function setBidShares(uint256 tokenId,  Decimal.D256 calldata _prevOwner, Decimal.D256 calldata  _owner, Decimal.D256 calldata _creator)
         external;
 
     function setAsk(uint256 tokenId,  uint amount, address currency) external;
