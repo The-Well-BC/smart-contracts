@@ -52,6 +52,9 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         string ipfsHash;
         string _alias;
     }
+    
+    
+     event TokenPrice(uint256 ID, uint256 price);
 
     /**
      * @notice Sets collaboratrs, artist, and artist/collaborator cuts
@@ -221,10 +224,10 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         receivePayment(tokenId);
         
         //tranfer token to buyer, ensure this contract has been approved to transferFrom token owner 
-         transferFrom(ownerOf(tokenId), msg.sender, tokenId);
+         _transfer(ownerOf(tokenId), msg.sender, tokenId);
     }
 
-    event TokenPrice(uint256 ID, uint256 price);
+   
 
     /* @notice Can only be called by the artist. allows the artist to change art prices */
     function setPrice(uint256 tokenID, uint256 _ArtPrice)
