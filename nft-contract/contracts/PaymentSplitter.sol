@@ -5,13 +5,14 @@ pragma solidity ^0.8.0;
 import "./openzeppelin/contracts/utils/Address.sol";
 import "./openzeppelin/contracts/utils/Context.sol";
 import {SafeMath} from "./openzeppelin/contracts//utils/math/SafeMath.sol";
+import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title PaymentSplitter
  * @dev PaymentSplitter for ERC721 contract. Will work with TheWellNFT. Each token has it's own set of payees[tokenId].
  *
  */
-contract PaymentSplitter is Context {
+contract PaymentSplitter is Context, ReentrancyGuard{
     event PayeeAdded(uint256 tokenId, address account, uint256 shares);
     event PaymentReleased(uint256 tokenId, address to, uint256 amount);
     event PaymentReceived(uint256 tokenId, address from, uint256 amount);
@@ -183,6 +184,7 @@ contract PaymentSplitter is Context {
         public
         virtual
         checkShares(tokenId)
+        nonReentrant
     {
         require(
             _shares[tokenId][account] > 0,

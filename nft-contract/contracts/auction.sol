@@ -120,7 +120,7 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
      * @notice Sets bid shares for a particular tokenId. These bid shares must
      * sum to 100
      */
-    function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata  _owner, Decimal.D256 calldata _creator  )
+    function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata  __owner, Decimal.D256 calldata _creator  )
         public
         override
         onlyMediaCaller
@@ -128,7 +128,7 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
         BidShares memory bidShares;
         bidShares.prevOwner = _prevOwner;
         bidShares.creator = _creator;
-        bidShares.owner = _owner;
+        bidShares.owner = __owner;
         require(
             isValidBidShares(bidShares),
             "Market: Invalid bid shares, must sum to 100"
@@ -252,7 +252,7 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
         ask.amount = amount;
         ask.currency = currency;
 
-        tokenAskSet[tokenId] == true;
+        tokenAskSet[tokenId] = true;
         _tokenAsks[tokenId] = ask;
         emit AskCreated(tokenId, ask);
     }

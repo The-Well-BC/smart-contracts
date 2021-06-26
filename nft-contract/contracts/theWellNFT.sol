@@ -9,7 +9,7 @@ import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Decimal} from "./Decimal.sol";
 
 /* The Well NFT contract */
-contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
+contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     struct Token {
         uint256 priceInEther;
         address owner;
@@ -17,7 +17,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
     }
 
     /* auction contract address    */
-    address auctionContract;
+    address public auctionContract;
 
     // well admin adress
     address wellAdmin;
@@ -60,18 +60,19 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
     constructor(
         string memory name_,
         string memory symbol_,
-        string memory tokenURITemplate
+        string memory tokenURITemplate,
+        address owner
     ) ERC721(name_, symbol_) {
         // setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
         setBaseURI(tokenURITemplate);
         nextTokenTracker = 1;
+        wellAdmin = owner; 
     }
 
     /** @dev checks if function caller is the artist  */
     modifier isArtist(uint256 tokenId) {
         require(
-            msg.sender == tokenMappings[tokenId].owner,
-            "Only the lead artist can call this function"
+            msg.sender == tokenMappings[tokenId].owner
         );
         _;
     }
@@ -98,8 +99,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
 
     modifier isWellAdmin(address msgSENDER) {
         require(
-            msgSENDER == wellAdmin,
-            "msg.sender not the well Admin add"
+            msgSENDER == wellAdmin
         );
         _;
     }
@@ -196,16 +196,16 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
 
     /**
      * @dev Sale function for the NFT
-     * @param tokenId_ - ID of the token being sold
+     * @param tokenId - ID of the token being sold
      */
 
     //use this function to make sale in ether only
-    function buyToken(uint256 tokenId_) external payable nonReentrant {
-        require(priceIsSet[tokenId_] == true, "token price not set ");
+    function buyToken(uint256 tokenId) external payable nonReentrant {
+        require(priceIsSet[tokenId] == true, "token price not set");
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
-            msg.value == tokenPrice[tokenId_],
+            msg.value == tokenPrice[tokenId],
             "sent ether not token price"
         );
         require(
@@ -215,13 +215,13 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard {
         );
 
         // remove ask and unset the token price 
-        priceIsSet[tokenId_] = false;
-        IMarket(auctionContract).removeAsk(tokenId_);
+        priceIsSet[tokenId] = false;
+        IMarket(auctionContract).removeAsk(tokenId);
         /* Uee PaymentSplitter to handle payments */
-        receivePayment(tokenId_);
-
-        // _safeMint(msg.sender, tokenId_, '');
-        // Should be transfer, not mint
+        receivePayment(tokenId);
+        
+        //tranfer token to buyer, ensure this contract has been approved to transferFrom token owner 
+         transferFrom(ownerOf(tokenId), msg.sender, tokenId);
     }
 
     event TokenPrice(uint256 ID, uint256 price);
