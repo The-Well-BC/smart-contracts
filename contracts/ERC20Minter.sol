@@ -10,7 +10,7 @@ import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol';
 * @dev Imported from OpenZeppelin's ERC20PresetMinterPauser.sol
 */
 
-contract ERC20Minter is Context, AccessControlEnumerable, ERC20 {
+contract ERC20Minter is Context, AccessControlEnumerable, ERC20Burnable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     /**
