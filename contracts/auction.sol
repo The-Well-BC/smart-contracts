@@ -9,7 +9,7 @@ import {
 import {Decimal} from "./Decimal.sol";
 import {TheWellNFT} from "./theWellNFT.sol";
 import {IMarket} from "./IMarket.sol";
-import {SafeMath} from "@openzeppelin/contracts//utils/math/SafeMath.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PaymentSplitter.sol";
 
 contract theWellAuctionContract is IMarket {
