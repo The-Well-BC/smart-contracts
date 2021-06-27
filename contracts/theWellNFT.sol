@@ -218,15 +218,6 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         return _payees[tokenId_];
     }
 
-    /**
-     * @notice - Returns collaborator address, collaborator share, collaborator balance
-     */
-    function getCollaborator(uint256 tokenId_, address _address) external view
-        returns ( address, uint256, uint256)
-    {
-        return payeeDetails(tokenId_, _address);
-    }
-
     // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
     function setReleaseTime(uint256 tokenID, uint256 _time) public isArtist(tokenID) nonReentrant onlyExistingToken(tokenID) {
         uint256 releaseTime = block.timestamp + _time;
