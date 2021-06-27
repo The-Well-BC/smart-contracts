@@ -104,7 +104,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         return uriTemplate;
     }
 
-    function setShares(
+    function setSplits(
         uint256 tokenId,
         address _artistAddr,
         uint256 _artistCut,
@@ -153,7 +153,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
 
-        setShares(tokenId, msg.sender, _artistCut,
+        setSplits(tokenId, msg.sender, _artistCut,
             _collaborators, _collaboratorRewards);
 
         _safeMint(msg.sender, tokenId);
