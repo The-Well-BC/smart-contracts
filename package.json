@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": ". ./.env.local && npx hardhat run --network development scripts/local-deploy.js",
+    "test": "nodemon -e js,sol --exec 'hardhat test'",
     "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
     "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ --abi contracts/*.sol -o abis --overwrite",
     "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
