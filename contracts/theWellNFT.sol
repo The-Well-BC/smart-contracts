@@ -185,7 +185,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         );
         require(
             /* Should not fail here. Checks that total collaborators is at most ten */
-            collaborators.length <= 10,
+            tokenMappings[tokenId_].collaborators.length <= 10,
             "Error minting NFT. Too many collaborators. Please contact contract creator"
         );
 
