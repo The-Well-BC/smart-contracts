@@ -10,16 +10,14 @@ import "./PaymentSplitter.sol";
 import {IMarket} from "./IMarket.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-/* The Well NFT contract */
 contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
-// contract TheWellNFT is ERC721URIStorage, ERC721Enumerable, PaymentSplitter, ReentrancyGuard  {
     struct Token{
         uint256 priceInEther;
         address owner;
         address[] collaborators;
     }
 
-    /* auction contract address    */
+    /* auction contract address */
     address auctionContract;
 
     // Release Time for timelocked NFTs
@@ -31,33 +29,14 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
 
+    string uriTemplate;
+
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokenMappings;
-
-    string uriTemplate;
 
     mapping(uint256 => uint256) tokenPrice;
 
     mapping(uint256 => bool) priceIsSet;
-
-    struct Collaborator {
-        address payable _address;
-        uint8 rewardPercentage;
-        uint256 balance;
-    }
-
-    /* 'artist' is the entity who is the MAIN creator of the art the nft represents. Artist is identified by an eth address*/
-    Collaborator artist;
-
-    address[] private collaborators;
-    uint256 public totalCollaborators;
-
-    /* Set to false if the media is not to be shown on the NFT page, or in searh results */
-    struct Art {
-        uint8 id;
-        string ipfsHash;
-        string _alias;
-    }
 
     /**
      * @notice Sets collaboratrs, artist, and artist/collaborator cuts
@@ -72,7 +51,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         nextTokenTracker = 1;
     }
 
-    /** @dev checks if function caller is the artist  */
+    /** @dev checks if function caller is the artist */
     modifier isArtist(uint256 tokenId) {
         require(
             msg.sender == tokenMappings[tokenId].owner,
@@ -109,15 +88,11 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         _;
     }
 
-    function changeWellAdmin(address _wellAdmin) public
-        isWellAdmin(msg.sender)
-    {
+    function changeWellAdmin(address _wellAdmin) public isWellAdmin(msg.sender) {
         wellAdmin = _wellAdmin;
     }
 
-    function setAuctionContract(address _auctionContract) public
-        isWellAdmin(msg.sender)
-    {
+    function setAuctionContract(address _auctionContract) public isWellAdmin(msg.sender) {
         auctionContract = _auctionContract;
     }
 
@@ -206,7 +181,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
             msg.value == tokenPrice[tokenId_],
-            "sent ether not equal to token price "
+            "Sent ether not equal to token price "
         );
         require(
             /* Should not fail here. Checks that total collaborators is at most ten */
@@ -217,10 +192,9 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         // remove ask and unset the token price 
         priceIsSet[tokenId_] = false;
         IMarket(auctionContract).removeAsk(tokenId_);
-        /* Uee PaymentSplitter to handle payments */
+
         receivePayment(tokenId_);
 
-        // _safeMint(msg.sender, tokenId_, '');
         // Should be transfer, not mint
     }
 
