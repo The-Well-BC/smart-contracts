@@ -188,6 +188,12 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         nextTokenTracker++;
     }
 
+    function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
+        if( ReleaseTime[tokenId_] <= block.timestamp) {
+            return true;
+        } else return false;
+    }
+
     /**
      * @dev Sale function for the NFT
      * @param tokenId_ - ID of the token being sold
