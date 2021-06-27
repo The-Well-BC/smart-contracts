@@ -3,19 +3,24 @@ const chai = require('chai');
 const { expect } = chai;
 const { isMainThread } = require("worker_threads");
 
-const TheWellNFT = artifacts.require('TheWellNFT');
 
-contract('Test: Setting Collaborators', function (accounts) {
-    let artist = accounts[0];
-    let collaborators = [accounts[3], accounts[4], accounts[5], accounts[6], accounts[7]];
-
-    let theWellNFT;
+describe.skip('Test: Setting Collaborators', function () {
+    let accounts, theWellNFT,
+    artist, collaborators;
 
     before(function() {
-        return TheWellNFT.deployed()
+        return Promise.all([
+            ethers.getSigners(),
+            ethers.getContractFactory('TheWellNFT')
+        ])
         .then(res => {
-            theWellNFT = res;
-        });
+            accounts = res[0];
+            artist = accounts[0];
+            collaborators = [accounts[3], accounts[4], accounts[5], accounts[6], accounts[7]];
+
+            return res[1].deploy('The Well NFT', 'WELLNFT', 'http://localhost:8082')
+        })
+        .then(res => theWellNFT = res);
     });
 
     it('Successfully mints NFT with no collaborators', () => {

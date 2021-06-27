@@ -1,98 +1,83 @@
 const chai = require('chai');
-chai.use(
-    require('chai-as-promised')
-);
+
+const {
+  expectEvent,  // Assertions for emitted events
+  expectRevert, // Assertions for transactions that should fail
+} = require('@openzeppelin/test-helpers');
+
+
+const truffleAssert = require('truffle-assertions');
+
 const { expect } = chai;
 
-let freshToken, wellToken, unitFresh, unitWell;
-const FreshTokenContract = artifacts.require('Fresh');
-const WellTokenContract = artifacts.require('Well');
+const deploy = require('./deploy');
 
-const WhitelistCrowdsale = artifacts.require('CollectorCrowdsale');
+let unitFresh, unitWell, Well, Fresh,
+    CollectorCrowdsale, accounts, tokenAmounts;
 
-contract.skip('Crowdsale: Test Whitelisting', function(accounts) {
+describe('Crowdsale: Test Whitelisting', function() {
     let packageIDs = [];
-    let whitelistedBuyers = [
-        accounts[4],
-        accounts[5],
-        accounts[6],
-    ]
+    let whitelistedBuyers, otherBuyers;
 
-    let otherBuyers = [
-        accounts[3],
-        accounts[7],
-        accounts[8],
-    ]
-    const price = web3.utils.toWei('25', 'ether');
+    const price = ethers.utils.parseEther('25');
 
     before(function() {
-        return Promise.all([
-            FreshTokenContract.deployed(), WellTokenContract.deployed(),
-            WhitelistCrowdsale.deployed()
-        ])
-        .then(res => {
-            freshToken = res[0]; wellToken = res[1];
-            crowdsale = res[2];
+        return deploy()
+        .then(deployed => {
+            const { crowdsale, fresh, unitFresh, well, unitWell } = deployed;
+            Well = well, Fresh = fresh;
+            accounts = deployed.accounts;
 
-            return Promise.all([
-                freshToken.decimals(), wellToken.decimals()
-            ])
-        })
-        .then(res => {
-            unitFresh = 10 ** parseInt(res[0].toString());
-            unitWell = 10 ** parseInt(res[1].toString());;
+            whitelistedBuyers = [ accounts[4], accounts[5], accounts[6], ];
+            otherBuyers = [ accounts[3], accounts[7], accounts[8], ];
+
+            CollectorCrowdsale = crowdsale;
 
             const packageName = 'First Package Tester blah blah';
-            const tokenAddresses = [ freshToken.address, wellToken.address ];
-            const tokenAmounts = [ (5 * unitFresh).toString(), unitWell.toString() ]
+            const tokenAddresses = [ fresh.address, well.address ];
+            tokenAmounts = [ (5 * unitFresh).toString(), unitWell.toString() ]
 
             return crowdsale.addPackage(packageName, price, tokenAddresses, tokenAmounts)
+            .then(res => res.wait())
             .then(res => {
-                packageIDs.push(res.logs[0].args.ID);
+                packageIDs.push(res.events[0].args.ID);
                 return Promise.all(whitelistedBuyers.map(buyer => {
-                    crowdsale.addToWhitelist(buyer);
+                    crowdsale.addToWhitelist(buyer.address);
                 }));
             })
         });
     });
 
-    it('Don\'t allow any purchases from buyers not on the whitelist', function() {
-        const rateInWEI = 1;
+    it('Don\'t allow any purchases from buyers not on the whitelist', async function() {
         const buyer = accounts[3];
 
-        return WhitelistCrowdsale.deployed()
-        .then(crowdsale => {
-            return expect(
-                crowdsale.buyTokens(buyer, packageIDs[0], {from: buyer, value: price})
-            ).to.be.rejectedWith('Address not allowed to buy token');
-        });
+        expect(
+            CollectorCrowdsale.connect(buyer).buyTokens(buyer.address, packageIDs[0], {value: price})
+        ).to.be.revertedWith('Crowdsale: Address not allowed to buy token');
     });
 
-    it('#dev #bad  Process purchases from buyers on the whitelist', function() {
-        const rateInWEI = 1;
-        const buyer = accounts[3];
-        const purchaseAmount = web3.utils.toWei('1', 'ether');
+    it('Revert if transaction value is not equal to package price', function() {
+        const purchaseAmount = ethers.utils.parseEther('1');
 
-        return WhitelistCrowdsale.deployed()
-        .then(crowdsale => {
-            return whitelistedBuyers.map(buyer => {
-                /*
-                return expect(
-                    crowdsale.buyTokens(buyer, packageIDs[0], {from: buyer, value: purchaseAmount})
-                ).to.eventually.be.fulfilled;
-                */
-                console.log('Buyer:', buyer);
-                return crowdsale.buyTokens(buyer, packageIDs[0], {from: buyer, value: purchaseAmount})
-                .then(res => {
-                    console.log('Bought tokens:', res);
-                });
-            })
-            /*
-            return expect( Promise.all( whitelistedBuyers.map(buyer => {
-                crowdsale.buyTokens(buyer, packageIDs[0], {from: buyer, value: purchaseAmount})
-            })))
-            .to.all.be.fulfilled;
-            */
-        });
+        return whitelistedBuyers.map(buyer => {
+            expect(
+                CollectorCrowdsale.connect(buyer).buyTokens(buyer.address, packageIDs[0], {value: purchaseAmount})
+            ).to.be.reverted;
+        })
+    });
+
+    it('#dev #bad #falsepositives Process purchases from buyers on the whitelist', function() {
+        return whitelistedBuyers.map(async buyerWallet => {
+            const buyer = buyerWallet.address;
+
+            let res = await CollectorCrowdsale.connect(buyerWallet).buyTokens(buyer, packageIDs[0], {value: price})
+
+            let wbalance = await Well.balanceOf(buyer);
+            let fbalance = await Fresh.balanceOf(buyer);
+
+            expect(wbalance.toString()).to.equal(tokenAmounts[1]);
+            expect(fbalance.toString()).to.equal(tokenAmounts[0]);
+
+        })
     });
 });

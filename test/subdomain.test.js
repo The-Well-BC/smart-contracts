@@ -1,86 +1,120 @@
 const chai = require('chai');
-chai.use(
-    require('chai-as-promised'));
-
 const { expect } = chai;
 
-const {MockProvider} = require('@ethereum-waffle/provider');
-const {deployENS, ENS} = require('@ethereum-waffle/ens');
+const deploy = require('./deploy');
 
-const Registrar = artifacts.require('SubDomainRegistrar');
-const Well = artifacts.require('Well');
-let ens, registrarAddress, registryAddress;
 const namehash = require('eth-ens-namehash');
 
-let wellContract;
+describe('Test subdomain registration', function() {
+    let well, Registrar, ens,
+    Registry, Resolver, accounts;
 
-contract.only('Test subdomain registration', function(accounts) {
-    let registrar;
+    const domain = 'thewellis.xyz';
 
-    const provider = new MockProvider();
-    const [wallet] = provider.getWallets();
-    const domain = 'testie.eth';
-    const domainNode = namehash.hash(domain);
-    console.log('domain node:', domainNode);
-    console.log('domain hash:', web3.utils.sha3(domainNode));
-    console.log('testie label hash:', web3.utils.sha3('testie'));
+    before(async function() {
+        const deployed = await deploy();
+        const { crowdsale, registry, registrar, resolver } = deployed;
+        ens = deployed.ens;
 
-    console.log('ook.chicken namehash', namehash.hash('ook.chicken'));
-    console.log('chicken.eth namehash', namehash.hash('chicken.eth'));
-    console.log('pak.chicken namehash', namehash.hash('pak.chicken'));
-    before(() => {
-        // Register domain first with ens
-        return deployENS(wallet)
-        .then(res => {
-            ens = res;
-            return ens.createTopLevelDomain('eth')
-        }).then(res => {
-            return ens.createSubDomain(domain);
-        }).then(res => {
-            registrarAddress = ens.registrars.eth.address;
-            // console.log('ENS:', ens);
-            // console.log('Checking for registry:', ens.registry);
-            registryAddress = ens.ens.address
-            console.log('Registry ADdress:', registryAddress);
-            console.log('Registrar deployed', registrarAddress);
+        Registry = registry, Registrar = registrar, Resolver = resolver,
+            well = deployed.well,
 
-            return Well.deployed()
-        })
-        .then(res => {
-            wellContract = res;
-            /*
-            return Registrar.new(registrarAddress,
-                domainNode)
-            */
-            return Registrar.new(registryAddress,
-                domainNode, wellContract.address)
-        }).then(res => {
-            registrar = res;
-        });
+        accounts = await ethers.getSigners();
     });
 
     it('Trying to register subdomain without paying WELL should be rejected', function() {
-        console.log('Subdomain label:', web3.utils.sha3('shouldfail'));
+        let account = accounts[3];
         return expect(
-            // registrar.register('should_fail', 1, accounts[3])
-            registrar.register('shouldfail', accounts[3], {from:accounts[3]})
-        ).to.be.rejected;
+            Registrar.connect(account).register('shouldfail', account.address)
+        ).to.be.revertedWith('Not enough tokens');
     });
 
-    it('Register subdomain if payment of 1 $WELL is made', function() {
-        let user = accounts[4];
-        // Mint 1 well to user before buying
-        return wellContract.decimals()
-        .then(decimals => {
-            console.log('Decimals:', decimals);
-            decimals = parseInt(decimals.toString());
+    it('Checking names of non existent subdomains should equal false', async function() {
+        return expect(
+            await Registrar.name(accounts[4].address)
+        ).to.equal('');
+    });
 
-            return wellContract.mint(accounts[4], (10 ** decimals).toString());
-        }).then(res => {
-            return registrar.register('newuser', user, {from:user})
-            // return registrar.register('newuser', 1, user, {from: user})
-        }).then(res => {
-            console.log('Registered new subdomain newuser.test-domains.eth', res);
+    it('Register subdomain with empty string should revert', function() {
+        // Init variables
+        let signer, balance, decimals, registerTx, subdomain = 'newuser';
+
+        before(async () => {
+            signer = accounts[1];
+
+        // Mint 1 well to user before buying
+            return well.decimals()
+            .then(res => {
+                decimals = parseInt(res.toString());
+                balance = 5 * (10 ** decimals);
+
+                return well.mint(signer.address, (balance).toString());
+            }).then(() => well.connect(signer).approve(Registrar.address, (10 ** decimals).toString()))
+            .then(async () => {
+                expect( await Registrar.connect(signer).register(subdomain, signer.address)
+                ).to.revert;
+            });
+        });
+    });
+
+    describe('Registering subdomains', function() {
+        // Init variables
+        let signer, balance, decimals, registerTx, subdomain = 'newuser';
+
+        before(async () => {
+            signer = accounts[4];
+
+        // Mint 1 well to user before buying
+            return well.decimals()
+            .then(res => {
+                decimals = parseInt(res.toString());
+
+                balance = 5 * (10 ** decimals);
+                return well.mint(signer.address, (balance).toString());
+            }).then(() => well.connect(signer).approve(Registrar.address, (10 ** decimals).toString()))
+            .then(() => Registrar.connect(signer).register(subdomain, signer.address))
+            .then(async res => {
+                registerTx = await res.wait();
+            })
+        })
+
+        it('Check that subdomain is created', async function() {
+            const subdomainRegistrationEvent = registerTx.events.some(log =>
+                log.event == 'SubdomainRegistration');
+
+            // Check SubdomainRegistration event
+            expect( subdomainRegistrationEvent, 'Check that SubdomainRegistration is emitted' ).to.be.true;
+
+            // Subdomain should be registered
+            expect( await Registry.recordExists( namehash.hash(subdomain + '.' + domain)), 'Check subdomain exists').to.be.true;
+        });
+
+        it('Check that balance of 1 $WELL has been taken from user\'s wallet', async function() {
+            // Account should be missing one $WELL token
+            expect( (await well.balanceOf(signer.address)).toString())
+                .to.equal((balance - (10 ** decimals)).toString());
+        });
+
+        it('Check that subdomain resolver is The Well\'s custom resolver', function() {
+            return Registry.resolver(namehash.hash(subdomain + '.' + domain))
+            .then(res => {
+                expect(res).to.equal(Resolver.address);
+            });
+        });
+
+        it('Check user\'s address is linked to their new subdomain', async function() {
+            expect(await Registrar.name(signer.address)).to.equal(subdomain);
+        });
+
+        it('TX to register subdomain that has already been registered should be reverted', async function() {
+            let user = accounts[8];
+
+            await well.mint(user.address, (balance).toString());
+            await well.connect(user).approve(Registrar.address, (10 ** decimals).toString());
+
+            await expect(
+                Registrar.connect(user).register(subdomain, user.address)
+            ).to.be.revertedWith('Subdomain has already been registered');
         });
     });
 });
