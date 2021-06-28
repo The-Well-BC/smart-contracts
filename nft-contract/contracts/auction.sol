@@ -362,6 +362,14 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
         _finalizeNFTTransfer(tokenId, bid.bidder);
     }
 
+
+    // function to set secondary sale for a tokenID mapping to true 
+    function setSecondarySale(uint tokenID) public override{
+        require(address(0) != TheWellNFTContract);
+        require(msg.sender == TheWellNFTContract);
+        secondarySale[tokenID] = true;
+    }
+
     /**
      * @notice Given a token ID and a bidder, this method transfers the value of
      * the bid to the shareholders. It also transfers the ownership of the media
