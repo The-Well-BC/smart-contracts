@@ -201,6 +201,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
 
         _released[tokenId][account] = _released[tokenId][account] + payment;
         _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
+        payeeMapping[tokenId][account].released = _released[tokenId][account];
 
         Address.sendValue(account, payment);
         emit PaymentReleased(tokenId, account, payment);

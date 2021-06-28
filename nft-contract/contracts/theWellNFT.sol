@@ -12,7 +12,7 @@ import {Decimal} from "./Decimal.sol";
 contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     struct Token {
         uint256 priceInEther;
-        address owner;
+        address artist;
         address[] collaborators;
     }
 
@@ -26,32 +26,15 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     uint256 nextTokenTracker;
 
     /* Mapping from token ID to Token */
-    mapping(uint256 => Token) tokenMappings;
+    mapping(uint256 => Token) tokenMappings; 
 
     string uriTemplate;
 
-    mapping(uint256 => uint256) tokenPrice;
-
     mapping(uint256 => bool) priceIsSet;
 
-    struct Collaborator {
-        address payable _address;
-        uint8 rewardPercentage;
-        uint256 balance;
-    }
 
-    /* 'artist' is the entity who is the MAIN creator of the art the nft represents. Artist is identified by an eth address*/
-    Collaborator artist;
 
-    address[] private collaborators;
-    uint256 public totalCollaborators;
-
-    /* Set to false if the media is not to be shown on the NFT page, or in searh results */
-    struct Art {
-        uint8 id;
-        string ipfsHash;
-        string _alias;
-    }
+    mapping (uint256 => uint256 ) public totalCollaborators;
     
     
      event TokenPrice(uint256 ID, uint256 price);
@@ -66,7 +49,6 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         string memory tokenURITemplate,
         address owner
     ) ERC721(name_, symbol_) {
-        // setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
         setBaseURI(tokenURITemplate);
         nextTokenTracker = 1;
         wellAdmin = owner; 
@@ -75,7 +57,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     /** @dev checks if function caller is the artist  */
     modifier isArtist(uint256 tokenId) {
         require(
-            msg.sender == tokenMappings[tokenId].owner
+            msg.sender == tokenMappings[tokenId].artist
         );
         _;
     }
@@ -137,8 +119,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         uint256[] memory _collaboratorRewards
     ) internal {
         require(
-            _collaborators.length <= 10,
-            "Cannot have + 10 collaborators"
+            _collaborators.length <= 10 ||  _collaboratorRewards.length <= 10, "Cannot have + 10 collaborators"
         );
 
         // Artist is always first collaborator
@@ -174,10 +155,11 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards,
         string memory _tokenURI,
-        uint _prevOwner,
-        uint _owner,
-        uint _creator
+        uint _prevOwnerPercentage,
+        uint _ownerPercentage,
+        uint _creatorPercentage
     ) public nonReentrant {
+    
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
         setShares(
@@ -187,9 +169,10 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
             _collaborators,
             _collaboratorRewards
         );
-        Decimal.D256 memory prevOwner =  Decimal.D256(_prevOwner * 10**18);
-        Decimal.D256 memory owner =  Decimal.D256(_owner * 10**18);
-        Decimal.D256 memory creator =  Decimal.D256(_creator * 10**18);
+        
+        Decimal.D256 memory prevOwner =  Decimal.D256(_prevOwnerPercentage * 10**18);
+        Decimal.D256 memory owner =  Decimal.D256(_ownerPercentage * 10**18);
+        Decimal.D256 memory creator =  Decimal.D256(_creatorPercentage * 10**18);
         IMarket(auctionContract).setBidShares(tokenId, prevOwner, owner, creator);
 
         _safeMint(msg.sender, tokenId);
@@ -208,13 +191,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
-            msg.value == tokenPrice[tokenId],
+            msg.value ==   tokenMappings[tokenId].priceInEther,
             "sent ether not token price"
-        );
-        require(
-            /* Should not fail here. Checks that total collaborators is at most ten */
-            collaborators.length <= 10,
-            "Error minting NFT,too many collaborators"
         );
 
         // remove ask and unset the token price 
@@ -233,10 +211,11 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     function setPrice(uint256 tokenID, uint256 _ArtPrice)
         public
         isArtist(tokenID)
+        onlyExistingToken(tokenID)
         nonReentrant
     {
         /* assign price in eth to art price */
-        tokenPrice[tokenID] = _ArtPrice;
+        tokenMappings[tokenID].priceInEther = _ArtPrice;
         IMarket AuctionContract = IMarket(auctionContract);
         AuctionContract.setAsk(tokenID, _ArtPrice, AuctionContract.getWETH());
         priceIsSet[tokenID] = true;
