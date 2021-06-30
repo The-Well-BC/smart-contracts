@@ -120,7 +120,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
         uint256[] memory _collaboratorRewards
     ) internal {
         require(
-            _collaborators.length <= 10 ||  _collaboratorRewards.length <= 10, "Cannot have + 10 collaborators"
+            _collaborators.length <= 10 ||  _collaboratorRewards.length <= 10
         );
 
         // Artist is always first collaborator
@@ -188,7 +188,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
 
     //use this function to make sale in ether only, works for first sale only for secondary sale use auction contract 
     function buyToken(uint256 tokenId) external payable nonReentrant {
-        require(firstSale[tokenId] != true, "TOKEN: use auction contract for secondary sale ");
+        require(firstSale[tokenId] != true);
         require(priceIsSet[tokenId] == true, "TOKEN: token price not set");
 
         require(

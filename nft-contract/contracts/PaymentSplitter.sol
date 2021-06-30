@@ -24,6 +24,10 @@ contract PaymentSplitter is Context, ReentrancyGuard{
 
     // Mapping of tokenId to mapping of payee address to amount of shares belong to payee
     mapping(uint256 => mapping(address => uint256)) internal _shares;
+    
+    // Mapping of tokenId to mapping of payee address to check if shares added to payee
+    mapping(uint256 => mapping(address => bool)) internal _sharesAddded;
+    
     // Mapping of tokenId to mapping of payee address to amount released to payee
     mapping(uint256 => mapping(address => uint256)) private _released;
 
@@ -73,7 +77,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
         require(payees.length > 0, "PaymentSplitter: no payees");
 
         for (uint256 i = 0; i < payees.length; i++) {
-            _addPayee(tokenId, payees[i], shares_[i]);
+              _addPayee(tokenId, payees[i], shares_[i]);
         }
     }
 
@@ -221,16 +225,17 @@ contract PaymentSplitter is Context, ReentrancyGuard{
             account != address(0),
             "PaymentSplitter: account is zero address"
         );
-        require(shares_ > 0, "PaymentSplitter: shares are 0");
         require(
-            _shares[tokenId][account] == 0,
+            _sharesAddded[tokenId][account] == false,
             "PaymentSplitter: account already has shares"
         );
+        require(_totalShares[tokenId] + shares_ <= 100);
 
         _payees[tokenId].push(account);
 
         payeeMapping[tokenId][account] = Payee(account, uint8(shares_), 0);
-
+        
+        _sharesAddded[tokenId][account] = true;
         _shares[tokenId][account] = shares_;
         _totalShares[tokenId] = _totalShares[tokenId] + shares_;
         emit PayeeAdded(tokenId, account, shares_);
