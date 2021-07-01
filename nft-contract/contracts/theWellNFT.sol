@@ -197,6 +197,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
             "TOKEN: sent ether not token price"
         );
 
+        paymentForToken[tokenId] = msg.value;
+
         // remove ask and unset the token price 
         priceIsSet[tokenId] = false;
         IMarket(auctionContract).removeAsk(tokenId);

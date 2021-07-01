@@ -34,6 +34,8 @@ contract PaymentSplitter is Context, ReentrancyGuard{
     // Mapping of tokenId to array of token payees ie (collaborators)
     mapping(uint256 => address[]) internal _payees;
 
+    mapping(uint => uint) internal paymentForToken;
+
     mapping(uint256 => mapping(address => Payee)) internal payeeMapping;
 
     struct Payee {
@@ -95,7 +97,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
      * functions].
      */
     receive() external payable virtual {
-        revert("Call the receivePayment method");
+        revert();
     }
 
     /**
@@ -195,7 +197,8 @@ contract PaymentSplitter is Context, ReentrancyGuard{
             "PaymentSplitter: account has no shares"
         );
 
-        uint256 totalReceived = address(this).balance + _totalReleased[tokenId];
+        uint256 totalReceived = paymentForToken[tokenId] + _totalReleased[tokenId];
+        
         uint256 payment =
             (totalReceived * _shares[tokenId][account]) /
                 _totalShares[tokenId] -
