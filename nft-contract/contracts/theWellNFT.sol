@@ -79,7 +79,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
      * @notice Require that the token has not been burned and has been minted
      */
     modifier onlyExistingToken(uint256 tokenId) {
-        require(_exists(tokenId), "Media: nonexistent token");
+        require(_exists(tokenId));
         _;
     }
 
