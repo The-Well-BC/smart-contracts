@@ -189,7 +189,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
     //use this function to make sale in ether only, works for first sale only for secondary sale use auction contract 
     function buyToken(uint256 tokenId) external payable nonReentrant {
         require(firstSale[tokenId] != true);
-        require(priceIsSet[tokenId] == true, "TOKEN: token price not set");
+        require(priceIsSet[tokenId] == true);
 
         require(
             /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
@@ -211,6 +211,14 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter {
          //mark first sale done 
         firstSale[tokenId] = true;
         IMarket(auctionContract).setSecondarySale(tokenId);
+    }
+
+    //call remove ask function in auction contractg to call this funtion 
+    function unsetPrice(uint tokenId) public{
+        require (msg.sender == auctionContract);
+        priceIsSet[tokenId] = false;
+        tokenMappings[tokenId].priceInEther = 0;
+
     }
 
    

@@ -38,6 +38,8 @@ contract PaymentSplitter is Context, ReentrancyGuard{
 
     mapping(uint256 => mapping(address => Payee)) internal payeeMapping;
 
+    mapping (uint => mapping(address => bool))paymentReleased;
+
     struct Payee {
         address _address;
         uint8 shares;
@@ -192,17 +194,15 @@ contract PaymentSplitter is Context, ReentrancyGuard{
         checkShares(tokenId)
         nonReentrant
     {
+        require(paymentReleased[tokenId][account] != true);
         require(
             _shares[tokenId][account] > 0,
             "PaymentSplitter: account has no shares"
-        );
-
-        uint256 totalReceived = paymentForToken[tokenId] + _totalReleased[tokenId];
+        ); 
         
         uint256 payment =
-            (totalReceived * _shares[tokenId][account]) /
-                _totalShares[tokenId] -
-                _released[tokenId][account];
+            (paymentForToken[tokenId] * _shares[tokenId][account]) /
+                _totalShares[tokenId];
 
         require(payment != 0, "PaymentSplitter: account not due payment");
 
@@ -210,6 +210,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
         _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
         payeeMapping[tokenId][account].released = _released[tokenId][account];
 
+        paymentReleased[tokenId][account] = true;
         Address.sendValue(account, payment);
         emit PaymentReleased(tokenId, account, payment);
     }

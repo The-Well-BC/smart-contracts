@@ -203,9 +203,10 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
     /**
      * @notice removes an ask for a token and emits an AskRemoved event
      */
-    function removeAsk(uint256 tokenId) public override ownerOrTheWell(tokenId)  {
+    function removeAsk(uint256 tokenId) public override ownerOrTheWell(tokenId) nonReentrant  {
         require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
+        TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
         tokenAskSet[tokenId] == false;
         delete _tokenAsks[tokenId];
     }
