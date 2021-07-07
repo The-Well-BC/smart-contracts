@@ -29,7 +29,7 @@ interface IMarket {
         // Amount of the currency being asked
         uint256 amount;
         // Address to the ERC20 token being asked
-        address currency;
+        address currency;  
     }
 
     struct BidShares {

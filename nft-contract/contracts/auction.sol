@@ -46,7 +46,7 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
     mapping (uint256 => bool) public  tokenAskSet;
 
     //mapping of token ID to bool value for tracking of secondary sales
-    mapping(uint256 => bool) private secondarySale;
+    mapping(uint256 => bool) public secondarySale;
 
     /* *********
      * Modifiers
@@ -207,7 +207,8 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
         require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
         TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
-        tokenAskSet[tokenId] == false;
+        tokenAskSet[tokenId] = false;
+          
         delete _tokenAsks[tokenId];
     }
 
@@ -325,8 +326,11 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
             bid.currency == WETH &&
             bid.amount >= _tokenAsks[tokenId].amount
         ) {
+            //remove ask
+            removeAsk(tokenId);
             // Finalize exchange
             _finalizeNFTTransfer(tokenId, bid.bidder);
+            
         }
     }
 
@@ -365,9 +369,7 @@ contract theWellAuctionContract is IMarket,  ReentrancyGuard{
 
 
     // function to set secondary sale for a tokenID mapping to true 
-    function setSecondarySale(uint tokenID) public override{
-        require(address(0) != TheWellNFTContract);
-        require(msg.sender == TheWellNFTContract);
+    function setSecondarySale(uint tokenID) public onlyMediaCaller override{
         secondarySale[tokenID] = true;
     }
 
