@@ -7,9 +7,11 @@
     "test": "nodemon -e js,sol --exec 'hardhat test'",
     "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
     "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ --abi contracts/*.sol -o abis --overwrite",
-    "ropsten:migrate": ". ./.env.local && npx truffle migrate --network ropsten",
-    "ropsten:console": ". ./.env.local && npx truffle console --network ropsten",
-    "verify-contracts:ropsten": ". ./.env.local && truffle run verify Well@0x41b366b7803D9157812EdEd524272F153683D719 --network ropsten"
+    "ropsten-deploy": ". ./.env.local && npx hardhat run --network ropsten scripts/ropsten-deploy.js",
+    "ropsten:migrate": "npm run ropsten-deploy",
+    "ropsten:console": ". ./.env.local && npx hardhat console --network ropsten",
+    "verify-contracts:ropsten": ". ./.env.local && truffle run verify Well@0x41b366b7803D9157812EdEd524272F153683D719 --network ropsten",
+    "verify-contracts": "npx hardhat verify --network ropsten 0xc101120AcD3C799799A43cEDD44F13BA77a82fbd "
   },
   "dependencies": {
     "@ensdomains/ens-contracts": "^0.0.4",
