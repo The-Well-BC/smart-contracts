@@ -5,11 +5,16 @@ const { Wallet } = require('@ethersproject/wallet');
 // const wallet = new Wallet(process.env.FUNDS_COLLECTOR, provider);
 
 const main = async function() {
-    const { well, fresh, nft, registrar, resolver, crowdsale } = await deploy(process.env.FUNDS_COLLECTOR, process.env.ENS_REGISTRY);
+    const domain = 'thewellis.xyz';
+    const registry = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
+
+    const { well, fresh, nft, registrar, resolver, crowdsale } = await deploy(process.env.FUNDS_COLLECTOR, registry, domain);
 
     console.log('Contracts deployed');
     console.log('WELL token:', well.address, '\nFRESH token:', fresh.address, 'The Well NFT:', nft.address);
-    console.log('Well Subdomain Registrar:', registrar.address, '\nThe Well Custom Resolver:', resolver.address, '\nCollector Crowdsale:', crowdsale.address);
+    console.log('Collector Crowdsale:', crowdsale.address);
+    console.log('Well Subdomain Registrar:', registrar.address, '\nThe Well Custom Resolver:', resolver.address);
+    console.log('Collector Crowdsale:', crowdsale.address);
 }
 
 main()

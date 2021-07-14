@@ -21,7 +21,7 @@ const setup = async function() {
     let registry = ens.ens;
 
     // Deploy contracts
-    const { well, fresh, crowdsale, nft, registrar, resolver } = await deploy(fundsCollector, registry);
+    const { well, fresh, crowdsale, nft, registrar, resolver } = await deploy(fundsCollector, registry.address, domain);
 
     // Set registrar as owner of registry
     await registry.connect(accounts[0]).setOwner(domainNode, registrar.address);

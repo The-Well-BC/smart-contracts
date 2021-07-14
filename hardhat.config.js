@@ -2,13 +2,15 @@
  * @type import('hardhat/config').HardhatUserConfig
  */
 
+require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 
 module.exports = {
     networks: {
         hardhat: {
             blockGasLimit: 0x1fffffffffffff,
-            allowUnlimitedContractSize: true,
+            allowUnlimitedContractSize: false,
             gas: 12000000,
         },
         development: {
@@ -17,7 +19,23 @@ module.exports = {
             blockGasLimit: 0x1fffffffffffff,
             allowUnlimitedContractSize: true,
             gas: 7000000,
+        },
+        ropsten: {
+            url: process.env.INFURA_ROPSTEN_API_KEY,
+            accounts: [ `0x${ process.env.PRIVATE_KEY }` ],
+            chainId: 3,
+            networkCheckTimeout: 100000,
+            gas: 8000000,
+            gasPrice: 100000000000
         }
+    },
+    etherscan: {
+        apiKey: process.env.ETHERSCAN_API_KEY
+    },
+    contractSizer: {
+        alphaSort: true,
+        runOnCompile: true,
+        disambiguatePaths: false,
     },
     settings: {
         optimizer: {

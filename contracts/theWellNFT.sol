@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 // import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "./PaymentSplitter.sol";
+import './Admin.sol';
 
 import {IMarket} from "./IMarket.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
+contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellAdmin {
     struct Token{
         uint256 priceInEther;
         address owner;
@@ -22,9 +23,6 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
 
     // Release Time for timelocked NFTs
     mapping(uint256 => uint256) internal ReleaseTime;
-
-    // well admin adress
-    address wellAdmin;
 
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
@@ -80,19 +78,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard  {
         _;
     }
 
-    modifier isWellAdmin(address msgSENDER) {
-        require(
-            msgSENDER == wellAdmin,
-            "msg.sender not the well Admin address"
-        );
-        _;
-    }
-
-    function changeWellAdmin(address _wellAdmin) public isWellAdmin(msg.sender) {
-        wellAdmin = _wellAdmin;
-    }
-
-    function setAuctionContract(address _auctionContract) public isWellAdmin(msg.sender) {
+    function setAuctionContract(address _auctionContract) public wellAdmin() {
+    // function setAuctionContract(address _auctionContract) public wellAdmin(msg.sender) {
         auctionContract = _auctionContract;
     }
 
