@@ -97,10 +97,10 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
         uint256 _artistCut,
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards
-    ) internal {
+    ) internal returns(address[] memory) {
         require(
             _collaborators.length <= 10,
-            "Cannot have more than 10 collaborators"
+            "Too many collaborators"
         );
 
         // Artist is always first collaborator
@@ -119,8 +119,11 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
 
         // Call PaymentSplitter _setShares
         _setShares(tokenId, payees, shares);
+
+        return payees;
     }
 
+    event MintNFT(uint256 _tokenID, string _tokenURI, address[] _creators);
     /**
       * @dev Mint function. Creates a new ERC721 token. _artist refers to the address minting the token
       * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
@@ -140,7 +143,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
 
-        setSplits(tokenId, msg.sender, _artistCut,
+        address[] memory creators_ = setSplits(tokenId, msg.sender, _artistCut,
             _collaborators, _collaboratorRewards);
 
         _safeMint(msg.sender, tokenId);
@@ -148,6 +151,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
         _setTokenURI(tokenId, _tokenURI);
 
         nextTokenTracker++;
+
+        emit MintNFT(tokenId, _tokenURI, creators_);
     }
 
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
