@@ -12,7 +12,7 @@ function checkParameters() {
     });
 }
 
-module.exports = async function start(fundsCollectorAddress, registryAddress, domain) {
+module.exports = async function start(fundsCollectorAddress, registryAddress, domain, baseURI = '') {
     // Check parameters
     // First check that no paramters are missing
     if(checkParameters(fundsCollectorAddress, registryAddress, domain) !== true)
@@ -41,8 +41,7 @@ module.exports = async function start(fundsCollectorAddress, registryAddress, do
     await well.grantMinterRole(crowdsale.address);
     await fresh.grantMinterRole(crowdsale.address);
 
-    // const nft = {};
-    const nft = await nftDeploy();
+    const nft = await nftDeploy(baseURI);
 
     return { well, fresh, crowdsale, nft, registrar, resolver };
 }

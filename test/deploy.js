@@ -17,9 +17,10 @@ module.exports = async function() {
 
     await ens.setAddress(domain, accounts[0].address, {recursive:true})
     let registry = ens.ens;
+    let baseURI = 'http://localhost:8002/ipfs/';
 
     // Deploy contracts
-    const { well, fresh, crowdsale, nft, registrar, resolver } = await deploy(fundsCollector, registry.address, domain);
+    const { well, fresh, crowdsale, nft, registrar, resolver } = await deploy(fundsCollector, registry.address, domain, baseURI);
 
     // Set registrar as owner of registry
     await registry.connect(accounts[0]).setOwner(domainNode, registrar.address);
