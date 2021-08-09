@@ -1,17 +1,17 @@
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import {IERC721} from "./openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IERC20} from "./openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
-} from "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Decimal} from "./Decimal.sol";
 import {TheWellNFT} from "./TheWellNFT.sol";
 import {IMarket} from "./IMarket.sol";
-import {SafeMath} from "./openzeppelin/contracts//utils/math/SafeMath.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PaymentSplitter.sol";
-import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract theWellAuctionContract is IMarket,  ReentrancyGuard{
     using SafeMath for uint256;

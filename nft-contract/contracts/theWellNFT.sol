@@ -5,7 +5,7 @@ import "./ERC721URIStorage.sol";
 import "./PaymentSplitter.sol";
 import "./ERC721.sol";
 import {IMarket} from "./IMarket.sol";
-import "./openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Decimal} from "./Decimal.sol";
 
 /* The Well NFT contract */
