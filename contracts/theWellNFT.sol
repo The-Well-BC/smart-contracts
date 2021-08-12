@@ -123,7 +123,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
         return payees;
     }
 
-    event MintNFT(uint256 _tokenID, string _tokenURI, address[] _creators);
+    event MintNFT(uint256 _tokenID, string _contentHash, address[] _creators);
     /**
       * @dev Mint function. Creates a new ERC721 token. _artist refers to the address minting the token
       * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
@@ -138,7 +138,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
         uint8 _artistCut,
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards,
-        string memory _tokenURI
+        string memory contentIpfsHash
     ) public {
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
@@ -148,11 +148,11 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
 
         _safeMint(msg.sender, tokenId);
 
-        _setTokenURI(tokenId, _tokenURI);
+        _setTokenURI(tokenId, contentIpfsHash);
 
         nextTokenTracker++;
 
-        emit MintNFT(tokenId, _tokenURI, creators_);
+        emit MintNFT(tokenId, contentIpfsHash, creators_);
     }
 
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
