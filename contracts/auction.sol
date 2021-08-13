@@ -11,8 +11,9 @@ import {TheWellNFT} from "./theWellNFT.sol";
 import {IMarket} from "./IMarket.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PaymentSplitter.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract theWellAuctionContract is IMarket {
+contract TheWellAuctionContract is IMarket, ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -41,13 +42,22 @@ contract theWellAuctionContract is IMarket {
     // Mapping from token to the current ask for the token
     mapping(uint256 => Ask) private _tokenAsks;
 
+// mapping to track if assk for a token is set
+    mapping (uint256 => bool) public  tokenAskSet;
+
     //mapping of token ID to bool value for tracking of secondary sales
-    mapping(uint256 => bool) private secondarySale;
+    mapping(uint256 => bool) public secondarySale;
 
     /* *********
      * Modifiers
      * *********
      */
+
+
+     modifier ownerOrTheWell(uint tokenId){
+         require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'AUCTION: Not token owner or token contract');
+         _;
+     }
 
     /**
      * @notice require that the msg.sender is the configured media contract
@@ -108,17 +118,22 @@ contract theWellAuctionContract is IMarket {
 
     /**
      * @notice Sets bid shares for a particular tokenId. These bid shares must
-     * sum to 100.
+     * sum to 100
      */
-    function setBidShares(uint256 tokenId, BidShares memory bidShares)
+    function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata  __owner, Decimal.D256 calldata _creator  )
         public
         override
         onlyMediaCaller
     {
+        BidShares memory bidShares;
+        bidShares.prevOwner = _prevOwner;
+        bidShares.creator = _creator;
+        bidShares.owner = __owner;
         require(
             isValidBidShares(bidShares),
             "Market: Invalid bid shares, must sum to 100"
         );
+
         _bidShares[tokenId] = bidShares;
         emit BidShareUpdated(tokenId, bidShares);
     }
@@ -188,16 +203,20 @@ contract theWellAuctionContract is IMarket {
     /**
      * @notice removes an ask for a token and emits an AskRemoved event
      */
-    function removeAsk(uint256 tokenId) external override onlyMediaCaller {
+    function removeAsk(uint256 tokenId) public override ownerOrTheWell(tokenId) nonReentrant  {
+        require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
+        TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
+        tokenAskSet[tokenId] = false;
+
         delete _tokenAsks[tokenId];
     }
 
     function removeBid(uint256 tokenId, address bidder)
         public
         override
-        onlyMediaCaller
     {
+        require(bidder == msg.sender, 'bidder must be msgsender');
         Bid storage bid = _tokenBidders[tokenId][bidder];
         uint256 bidAmount = bid.amount;
         address bidCurrency = bid.currency;
@@ -220,7 +239,8 @@ contract theWellAuctionContract is IMarket {
         uint256 tokenId,
         uint256 amount,
         address currency
-    ) public override onlyMediaCaller {
+    ) public override ownerOrTheWell(tokenId) {
+        require(tokenAskSet[tokenId] != true, 'AUCTION: token ask already set, use removeAsk');
         require(
             isValidBid(tokenId, amount),
             "Market: Ask invalid for share splitting"
@@ -234,6 +254,7 @@ contract theWellAuctionContract is IMarket {
         ask.amount = amount;
         ask.currency = currency;
 
+        tokenAskSet[tokenId] = true;
         _tokenAsks[tokenId] = ask;
         emit AskCreated(tokenId, ask);
     }
@@ -242,7 +263,7 @@ contract theWellAuctionContract is IMarket {
 
     function previousOwner(uint tokenID) public view returns (address) {
         require( _previousOwner[tokenID] != address(0), "ERC721: previous owner query gives invalid address");
-        return _previousOwner[tokenID]; 
+        return _previousOwner[tokenID];
     }
 
     //let buyers create bids
@@ -251,7 +272,7 @@ contract theWellAuctionContract is IMarket {
         uint256 tokenId,
         Bid calldata bid,
         address spender
-    ) public override onlyMediaCaller {
+    ) public override {
         BidShares memory bidShares = _bidShares[tokenId];
         require(
             bidShares.creator.value.add(bid.sellOnShare.value) <=
@@ -305,8 +326,11 @@ contract theWellAuctionContract is IMarket {
             bid.currency == WETH &&
             bid.amount >= _tokenAsks[tokenId].amount
         ) {
+            //remove ask
+            removeAsk(tokenId);
             // Finalize exchange
             _finalizeNFTTransfer(tokenId, bid.bidder);
+
         }
     }
 
@@ -320,10 +344,11 @@ contract theWellAuctionContract is IMarket {
      * but is necessary to ensure fairness to all shareholders.
      */
     function acceptBid(uint256 tokenId, Bid calldata expectedBid)
-        external
+        public
         override
-        onlyMediaCaller
+        nonReentrant
     {
+        require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'AUCTION: cannot accept bid, not token owner');
         Bid memory bid = _tokenBidders[tokenId][expectedBid.bidder];
         require(bid.amount > 0, "Market: cannot accept bid of 0");
         require(
@@ -342,6 +367,12 @@ contract theWellAuctionContract is IMarket {
         _finalizeNFTTransfer(tokenId, bid.bidder);
     }
 
+
+    // function to set secondary sale for a tokenID mapping to true
+    function setSecondarySale(uint tokenID) public onlyMediaCaller override{
+        secondarySale[tokenID] = true;
+    }
+
     /**
      * @notice Given a token ID and a bidder, this method transfers the value of
      * the bid to the shareholders. It also transfers the ownership of the media
@@ -354,18 +385,11 @@ contract theWellAuctionContract is IMarket {
         require(bid.currency == WETH, "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
-
         address[] memory addressOfCreators =
             TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
         uint256 creatorShare = splitShare(bidShares.creator, bid.amount);
 
         if (secondarySale[tokenId] == true) {
-            // Check that the lockup period has passed
-            require(
-                TheWellNFT(TheWellNFTContract).lockupPeriodOver(tokenId),
-                'Market: token lock up period not over!'
-            );
-
             // Transfer bid share to owner of media
             token.safeTransfer(
                 IERC721(TheWellNFTContract).ownerOf(tokenId),
@@ -394,11 +418,11 @@ contract theWellAuctionContract is IMarket {
                 _previousOwner[tokenId],
                 splitShare(bidShares.prevOwner, bid.amount)
             );
-            } 
+            }
 
 
 
-            //set previous owner, turn current nft owner to previous owner then transfer out  
+            //set previous owner, turn current nft owner to previous owner then transfer out
              _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
 
             // Transfer media to bid recipient
@@ -423,7 +447,7 @@ contract theWellAuctionContract is IMarket {
 
                 token.safeTransfer(addressOfCreators[i], reward);
             }
-                //set previous owner 
+                //set previous owner
                 _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
 
                 // Transfer media to bid recipient

@@ -26,7 +26,7 @@ interface IMarket {
         // Amount of the currency being asked
         uint256 amount;
         // Address to the ERC20 token being asked
-        address currency;
+        address currency;  
     }
 
     struct BidShares {
@@ -77,7 +77,7 @@ interface IMarket {
 
     function configure(address payable theWellNFTContract) external;
 
-    function setBidShares(uint256 tokenId, BidShares calldata bidShares)
+    function setBidShares(uint256 tokenId,  Decimal.D256 calldata _prevOwner, Decimal.D256 calldata  _owner, Decimal.D256 calldata _creator)
         external;
 
     function setAsk(uint256 tokenId,  uint amount, address currency) external;
@@ -95,4 +95,6 @@ interface IMarket {
     function acceptBid(uint256 tokenId, Bid calldata expectedBid) external;
 
     function getWETH() external view  returns(address);
+
+    function setSecondarySale(uint tokenID) external;
 }
