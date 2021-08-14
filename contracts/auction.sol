@@ -13,7 +13,7 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PaymentSplitter.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract TheWellAuctionContract is IMarket, ReentrancyGuard{
+contract TheWellMarketplace is IMarket, ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
