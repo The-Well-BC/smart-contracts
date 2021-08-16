@@ -13,8 +13,10 @@ function checkParameters() {
 }
 
 module.exports = async function start(fundsCollectorAddress, registryAddress, domain, baseURI = '') {
-    // Check parameters
-    // First check that no paramters are missing
+    /** PRE DEPLOYMENTS
+     * Check parameters
+     * First check that no paramters are missing
+     */
     if(checkParameters(fundsCollectorAddress, registryAddress, domain) !== true)
         throw new Error('Missing parameter');
 
@@ -33,6 +35,7 @@ module.exports = async function start(fundsCollectorAddress, registryAddress, do
     if(tlds.includes(domain.match(/(?<=\.).*$/g)[0]) !== true)
         throw new Error('Domain should be a ' + tlds.join(', .') + 'domain');
 
+    // Deploy contracts
     const { well, fresh } = await tokenDeploy();
     const { resolver, registrar } = await registrarDeploy(well, registryAddress, domain);
 
@@ -41,7 +44,13 @@ module.exports = async function start(fundsCollectorAddress, registryAddress, do
     await well.grantMinterRole(crowdsale.address);
     await fresh.grantMinterRole(crowdsale.address);
 
-    const nft = await nftDeploy(baseURI);
+    const { nft, marketplace } = await nftDeploy(fresh, baseURI);
 
-    return { well, fresh, crowdsale, nft, registrar, resolver };
+    // Payment Splitter contract
+    const PaymentSplitter = await hh.ethers.getContractFactory('TheWellPaymentSplitter');
+    const paymentSplitter = await PaymentSplitter.deploy();
+    paymentSplitter.setNFTContract(nft.address);
+    nft.setPaymentContract(paymentSplitter.address);
+
+    return { well, fresh, crowdsale, nft, marketplace, registrar, resolver, paymentSplitter };
 }

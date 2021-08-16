@@ -7,8 +7,9 @@ const { Wallet } = require('@ethersproject/wallet');
 const main = async function() {
     const domain = 'thewellis.xyz';
     const registry = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
+    let baseURI = 'http://ipfs.gateway.io/ipfs/';
 
-    const { well, fresh, nft, registrar, resolver, crowdsale } = await deploy(process.env.FUNDS_COLLECTOR, registry, domain);
+    const { well, fresh, nft, registrar, resolver, crowdsale } = await deploy(process.env.FUNDS_COLLECTOR, registry, domain, baseURI);
 
     console.log('Contracts deployed');
     console.log('WELL token:', well.address, '\nFRESH token:', fresh.address, 'The Well NFT:', nft.address);
