@@ -156,6 +156,16 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         emit MintNFT(tokenId, contentIpfsHash, creators_);
     }
 
+    function nftPurchaseTransfer(uint256 tokenId_, address recipient_) external onlyMarketplaceContract {
+        // Transfer media to bid recipient
+        _safeTransfer(
+            ownerOf(tokenId_),
+            recipient_,
+            tokenId_,
+            "NFT purchase transfer"
+        );
+    }
+
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
         if( ReleaseTime[tokenId_] <= block.timestamp) {
             return true;
