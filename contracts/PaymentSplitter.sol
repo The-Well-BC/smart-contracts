@@ -45,6 +45,12 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
 
     mapping(uint => uint) internal paymentForToken;
 
+    // ERC20 array
+    IERC20[] public erc20Arr;
+
+    // Mapping ERC20 to token id to erc20 balance for that token
+    mapping(IERC20 => mapping(uint => uint256)) internal erc20PaymentsReceived;
+
     mapping(uint256 => mapping(address => Payee)) internal payeeMapping;
 
     mapping (uint => mapping(address => bool))paymentReleased;
@@ -96,6 +102,21 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
 
     function receivePayment(uint256 tokenId) internal checkShares(tokenId) {
         emit PaymentReceived(tokenId, _msgSender(), msg.value);
+    }
+
+    /**
+      * @dev receives payment in the form of ERC20 tokens
+      */
+    function receiveERC20Payment(uint256 tokenID, address buyer, uint256 paymentAmount, IERC20 paymentToken) external override returns(bool) {
+        // Check that payees for that token exist
+        require(_payees[tokenID].length > 0);
+
+        IERC20(paymentToken).safeTransferFrom(buyer, address(this), paymentAmount);
+
+        erc20PaymentsReceived[paymentToken][tokenID] += paymentAmount;
+
+        emit PaymentReceivedERC20(tokenID, buyer, paymentAmount, address(paymentToken));
+        return true;
     }
 
     /**
@@ -211,6 +232,33 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
 
         paymentReleased[tokenId][account] = true;
         Address.sendValue(account, payment);
+        emit PaymentReleased(tokenId, account, payment);
+    }
+
+    function release(uint256 tokenId, address payable account, IERC20 paymentToken)
+        external virtual
+        checkShares(tokenId)
+        nonReentrant
+    {
+        require(paymentReleased[tokenId][account] != true);
+        require(
+            _shares[tokenId][account] > 0,
+            "PaymentSplitter: account has no shares"
+        );
+
+        uint256 payment = (
+            erc20PaymentsReceived[paymentToken][tokenId] * _shares[tokenId][account]
+        ) /
+            _totalShares[tokenId];
+
+        require(payment != 0, "PaymentSplitter: account not due payment");
+
+        _released[tokenId][account] = _released[tokenId][account] + payment;
+        _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
+        payeeMapping[tokenId][account].released = _released[tokenId][account];
+
+        paymentReleased[tokenId][account] = true;
+        paymentToken.safeTransfer(account, payment);
         emit PaymentReleased(tokenId, account, payment);
     }
 
