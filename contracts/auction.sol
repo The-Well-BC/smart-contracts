@@ -133,7 +133,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * @notice Sets bid shares for a particular tokenId. These bid shares must
      * sum to 100
      */
-    function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata  __owner, Decimal.D256 calldata _creator  )
+    function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata __owner, Decimal.D256 calldata _creator)
         public
         override
         onlyMediaCaller
@@ -216,7 +216,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     /**
      * @notice removes an ask for a token and emits an AskRemoved event
      */
-    function removeAsk(uint256 tokenId) public override ownerOrTheWell(tokenId) nonReentrant  {
+    function removeAsk(uint256 tokenId) public override
+        ownerOrTheWell(tokenId) nonReentrant
+    {
         require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
         TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
@@ -263,6 +265,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             currency == WETH,
             "Market: invalid  Ask currency set, only use WETH address"
         );
+
         Ask memory ask;
         ask.amount = amount;
         ask.currency = currency;
@@ -272,15 +275,18 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         emit AskCreated(tokenId, ask);
     }
 
-    //get address of previous owner of token
+    /**
+     * Getter fn for address of previous owner of token
+     */
 
     function previousOwner(uint tokenID) public view returns (address) {
         require( _previousOwner[tokenID] != address(0), "ERC721: previous owner query gives invalid address");
         return _previousOwner[tokenID];
     }
 
-    //let buyers create bids
-
+    /**
+     * Bid on token
+     */
     function createBid(
         uint256 tokenId,
         Bid calldata bid,

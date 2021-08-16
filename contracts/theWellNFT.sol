@@ -20,32 +20,27 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     /* auction contract address */
     address auctionContract;
 
-    // Release Time for timelocked NFTs
-    mapping(uint256 => uint256) internal ReleaseTime;
     /* Payments handler contract */
     IPayments private paymentsContract;
 
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
 
-    string uriTemplate;
-
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokenMappings;
 
-    mapping(uint256 => uint256) tokenPrice;
+    string uriTemplate;
 
-    mapping(uint256 => bool) priceIsSet;
+    // Release Time for timelocked NFTs
+    mapping(uint256 => uint256) internal ReleaseTime;
 
-    /**
-     * @notice Sets collaboratrs, artist, and artist/collaborator cuts
-     */
+    event MintNFT(uint256 _tokenID, string _contentHash, address[] _creators);
+
     constructor(
         string memory name_,
         string memory symbol_,
         string memory tokenURITemplate
     ) ERC721(name_, symbol_) {
-        // setShares(_artist, _artistCut, _collaborators, _collaboratorRewards);
         setBaseURI(tokenURITemplate);
         nextTokenTracker = 1;
     }
@@ -124,12 +119,10 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         return payees;
     }
 
-    event MintNFT(uint256 _tokenID, string _contentHash, address[] _creators);
     /**
       * @dev Mint function. Creates a new ERC721 token. _artist refers to the address minting the token
       * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
       * Will also set the token URI
-
       * @param _artistCut Percentage of sales the minter gets.
       * @param _collaborators Array of other collaborators that contributed to the art.
       * @param _collaboratorRewards Array of percentage of sale that each collaborator gets.
@@ -181,7 +174,10 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     }
 
     // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
-    function setReleaseTime(uint256 tokenID, uint256 _time) public isArtist(tokenID) nonReentrant onlyExistingToken(tokenID) {
+    function setReleaseTime(uint256 tokenID, uint256 _time)
+        public nonReentrant onlyExistingToken(tokenID)
+    {
+        require(isArtist(tokenID, msg.sender));
         uint256 releaseTime = block.timestamp + _time;
         ReleaseTime[tokenID] = releaseTime;
     }
