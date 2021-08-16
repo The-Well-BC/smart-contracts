@@ -112,6 +112,8 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     }
 
     function receivePayment(uint256 tokenId) internal checkShares(tokenId) {
+        paymentForToken[tokenId] += msg.value;
+
         emit PaymentReceived(tokenId, _msgSender(), msg.value);
     }
 
