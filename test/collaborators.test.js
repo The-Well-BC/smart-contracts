@@ -3,27 +3,23 @@ const chai = require('chai');
 const { expect } = chai;
 const { isMainThread } = require("worker_threads");
 
+const deploy = require('./deploy');
 
 describe('Test: Setting Collaborators', function () {
     let accounts, theWellNFT,
         tokenUri = 'http://example-tokens/s0m3Hash';
 
-    before(function() {
-        return Promise.all([
-            ethers.getSigners(), ethers.getContractFactory('TheWellNFT')
-        ])
-        .then(res => {
-            accounts = res[0];
+    before(async function() {
+        let deployed = await deploy();
+        accounts = deployed.accounts;
 
-            return res[1].deploy('The Well NFT', 'WELLNFT', 'http://localhost:8082')
-        })
-        .then(res => theWellNFT = res);
+        theWellNFT = deployed.nft;
     });
 
     it('Successfully mints NFT with no collaborators', () => {
 
         let artist = accounts[1];
-        return theWellNFT.connect(artist).mint(100, [], [], tokenUri)
+        return theWellNFT.connect(artist).mint(100, [], [], tokenUri, 30, 45, 25)
         .then(res => res.wait())
         .then(res => {
             expect(res.events).to.satisfy(events => {
@@ -44,7 +40,7 @@ describe('Test: Setting Collaborators', function () {
         const collaborator = accounts[2],
             collaboratorShare = 35;
 
-        return theWellNFT.connect(artist).mint(65, [collaborator.address], [collaboratorShare], tokenUri)
+        return theWellNFT.connect(artist).mint(65, [collaborator.address], [collaboratorShare], tokenUri, 30, 45, 25)
         .then(res => res.wait())
         .then(res => {
             expect(res.events).to.satisfy(events => {
@@ -70,7 +66,7 @@ describe('Test: Setting Collaborators', function () {
 
         const collaboratorShares = collaborators.map((a, i) => (i + 1) + (i * 3));
 
-        return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, tokenUri)
+        return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, tokenUri, 30, 45, 25)
         .then(res => res.wait())
         .then(res => {
             let tokenID = res.events.filter(log => log.event == 'Transfer')[0]
@@ -92,16 +88,19 @@ describe('Test: Setting Collaborators', function () {
             const collaborator = accounts[8],
                 collaboratorShare = 35;
 
-            return theWellNFT.connect(artist).mint(65, [], [], tokenUri)
+            return theWellNFT.connect(artist).mint(65, [], [], tokenUri, 30, 45, 25)
             .then(res => res.wait())
             .then(res => {
                 expect(res.events).to.satisfy(events => {
-                    let mintEvent = events.filter(log => log.event == 'MintNFT');
+                    let mintEvents = events.filter(log => log.event == 'MintNFT');
+                    let mintEvent = mintEvents[0];
 
-                    expect( mintEvent[0].args._creators ).
+                    expect( mintEvent.args._creators ).
                         to.eql([artist.address]);
 
-                    return mintEvent.length == 1;
+                    expect( mintEvent.args._contentHash ).to.equal(tokenUri);
+
+                    return mintEvents.length == 1;
                 }, 'Expect one "MintNFT" event that returns all collaborators');
             })
         });
@@ -112,8 +111,9 @@ describe('Test: Setting Collaborators', function () {
                 accounts[5].address, accounts[7].address ];
 
             const collaboratorShares = collaborators.map((a, i) => (i + 1) + (i * 3));
+            console.log('collaborator shares:', collaboratorShares);
 
-            return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, tokenUri)
+            return theWellNFT.connect(artist).mint(55, collaborators, collaboratorShares, tokenUri, 30, 45, 25)
             .then(res => res.wait())
             .then(res => {
                 expect(res.events).to.satisfy(events => {

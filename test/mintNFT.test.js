@@ -25,10 +25,11 @@ describe('Test: Mint NFTs', function () {
     });
 
     it('Check default NFT URI', () => {
+        let baseURI = 'http://localhost:8002/ipfs/';
         const artistWallet = artists[0], artist = artists[0].address;
-        let tokenID, tokenURI = 'https://boom.com/{tokenId}.json';
+        let tokenID, tokenURI = 'Qmblah123.json';
 
-        return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], tokenURI)
+        return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], tokenURI, 30, 45, 25)
         .then(res => res.wait())
         .then(res => {
             tokenID = res.events.filter(log => log.event == 'Transfer')[0]
@@ -36,7 +37,7 @@ describe('Test: Mint NFTs', function () {
             // Check token URI
             return theWellNFT.tokenURI(tokenID)
         }).then(uri => {
-            expect(uri).to.equal(tokenURI);
+            expect(uri).to.equal(baseURI + tokenURI);
         });
     });
 
@@ -44,7 +45,7 @@ describe('Test: Mint NFTs', function () {
         const artistWallet=artists[1], artist = artistWallet.address;
         let tokenID;
 
-        return theWellNFT.connect(artistWallet).mint(65, [collaborators[1]], [35], 'Qmabcdefg.json')
+        return theWellNFT.connect(artistWallet).mint(65, [collaborators[1]], [35], 'Qmabcdefg.json', 30, 45, 25)
         .then(res => res.wait())
         .then(res => {
             tokenID = res.events.filter(log => log.event == 'Transfer')[0]
@@ -60,7 +61,7 @@ describe('Test: Mint NFTs', function () {
     it('Check artist NFT balance - No collaborators', async () => {
         const artistWallet=artists[2], artist = artistWallet.address;
 
-        return theWellNFT.connect(artistWallet).mint(100, [], [], '')
+        return theWellNFT.connect(artistWallet).mint(100, [], [], '', 30, 45, 25)
         .then(tx => tx.wait())
         .then(tx => {
             expect(
@@ -88,7 +89,7 @@ describe('Test: Mint NFTs', function () {
         const collaborator = accounts[5].address,
             collaboratorShare = 35;
 
-        return theWellNFT.connect(artistWallet).mint(65, [collaborator], [collaboratorShare], 'asdf.json')
+        return theWellNFT.connect(artistWallet).mint(65, [collaborator], [collaboratorShare], 'asdf.json', 30, 45, 25)
         .then(res => res.wait())
         .then(res => {
             expect(res.events).to.satisfy(events => {
