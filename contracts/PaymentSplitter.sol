@@ -55,11 +55,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
 
     mapping (uint => mapping(address => bool))paymentReleased;
 
-    struct Payee {
-        address _address;
-        uint8 shares;
-        uint256 released;
-    }
+    address nftContractAddress;
 
     /**
      * @dev Checks that shares have been set.
@@ -70,6 +66,19 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
             "PaymentSplitter: no shares set, use _setShares()"
         );
         _;
+    }
+
+    modifier nftContractOnly() {
+        require(msg.sender == nftContractAddress);
+        _;
+    }
+
+    function maxTenShares(address[] memory arr) private returns(bool){
+        return arr.length <= 10;
+    }
+
+    function setNFTContract(address nftContractAddress_) external wellAdmin {
+        nftContractAddress = nftContractAddress_;
     }
 
     /**
