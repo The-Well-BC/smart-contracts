@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 // import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "./PaymentSplitter.sol";
+import "./IPayments.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import './Admin.sol';
-
 import {IMarket} from "./IMarket.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Decimal} from "./Decimal.sol";
 
 contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellAdmin {
     struct Token{
