@@ -12,6 +12,7 @@ import {IMarket} from "./IMarket.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./IPayments.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TheWellMarketplace is IMarket, ReentrancyGuard{
     using SafeMath for uint256;
@@ -305,8 +306,12 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             "Market: bid currency cannot be 0 address"
         );
         require(
-            bid.currency == WETH,
-            "'Market: invalid bid currency set, only use WETH address'"
+            ERC20(bid.currency).decimals() === 18,
+            "'Market: invalid bid currency, decimals not 18"
+        );// take this off if we only using our tokens 
+        require(
+            bid.currency == WETH || bid.currency == WELL ,
+            "'Market: invalid bid currency set, only use WETH OR WELL address"
         );
         require(
             bid.recipient != address(0),
@@ -368,9 +373,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
     /**
      * Purchase a token
-     * Function will accept ether and an erc20 token
+     * Function will accept ether
      */
-    function buyToken(uint256 tokenId_, uint256 amount, IERC20 purchaseToken) external {
+    function buyToken(uint256 tokenId_, uint256 amount) external payable {
         require(secondarySale[tokenId_] != true);
         require(priceIsSet[tokenId_] == true, "Set token price first");
 
@@ -455,27 +460,35 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      */
 
     function _finalizeSale(uint256 tokenId, address buyer, uint256 amount, IERC20 purchaseToken) private {
+        require(amount >= 1000 wei);
         BidShares storage bidShares = _bidShares[tokenId];
         address recipient = buyer;
+
+        //take %12.5 of amount as fees + donation to the mintFund
+        uint amountForFees = amount * 125/1000;
+        uint newAmount = amount - amountForFees;
+        purchaseToken.transfer(TheWellTreasury, amountForFees);
+
+
 
         address[] memory addressOfCreators =
             TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
 
-        uint256 creatorShare = splitShare(bidShares.creator, amount);
+        uint256 creatorShare = splitShare(bidShares.creator, newAmount);
 
         IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
         if(secondarySale[tokenId] == true) {
             // Transfer bid share to owner of media
             purchaseToken.safeTransfer(
                 IERC721(TheWellNFTContract).ownerOf(tokenId),
-                splitShare(bidShares.owner, amount)
+                splitShare(bidShares.owner, newAmount)
             );
 
             // Transfer bid share to previous owner of media
             if (_previousOwner[tokenId] != address(0)){
                 purchaseToken.safeTransfer(
                     _previousOwner[tokenId],
-                    splitShare(bidShares.prevOwner, amount)
+                    splitShare(bidShares.prevOwner, newAmount)
                 );
             }
         } else {
