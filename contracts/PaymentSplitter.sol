@@ -6,16 +6,25 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { IPayments } from './IPayments.sol';
+import './Admin.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title PaymentSplitter
  * @dev PaymentSplitter for ERC721 contract. Will work with TheWellNFT. Each token has it's own set of payees[tokenId].
  *
  */
-contract PaymentSplitter is Context, ReentrancyGuard{
-    event PayeeAdded(uint256 tokenId, address account, uint256 shares);
-    event PaymentReleased(uint256 tokenId, address to, uint256 amount);
-    event PaymentReceived(uint256 tokenId, address from, uint256 amount);
+contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmin {
+    using SafeERC20 for IERC20;
+
+    struct ERC20Balance{
+        address addr;
+        uint256 balance;
+    }
 
     // Mapping of tokenId to total shares of token
     mapping(uint256 => uint256) private _totalShares;
@@ -70,7 +79,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
         uint256 tokenId,
         address[] memory payees,
         uint256[] memory shares_
-    ) internal {
+    ) external nftContractOnly override {
         // Can only be set once
         require(_payees[tokenId].length == 0, "You can only set shares once");
 
@@ -98,14 +107,14 @@ contract PaymentSplitter is Context, ReentrancyGuard{
      * https://solidity.readthedocs.io/en/latest/contracts.html#fallback-function[fallback
      * functions].
      */
-    receive() external payable virtual {
+    receive() external payable virtual override {
         revert();
     }
 
     /**
      * @dev Getter for the total shares held by payees[tokenId].
      */
-    function totalShares(uint256 tokenId) public view
+    function totalShares(uint256 tokenId) public view override
         checkShares(tokenId)
         returns (uint256)
     {
@@ -115,7 +124,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
     /**
      * @dev Getter for the total amount of Ether already released.
      */
-    function totalReleased(uint256 tokenId) public view
+    function totalReleased(uint256 tokenId) public view override
         checkShares(tokenId)
         returns (uint256)
     {
@@ -125,7 +134,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
     /**
      * @dev Getter for the amount of shares held by an account.
      */
-    function shares(uint256 tokenId, address account) public view
+    function shares(uint256 tokenId, address account) public view override
         checkShares(tokenId)
         returns (uint256)
     {
@@ -135,7 +144,7 @@ contract PaymentSplitter is Context, ReentrancyGuard{
     /**
      * @dev Getter for the amount of Ether already released to a payee.
      */
-    function released(uint256 tokenId, address account) public view
+    function released(uint256 tokenId, address account) public view override
         checkShares(tokenId)
         returns (uint256)
     {
@@ -145,17 +154,24 @@ contract PaymentSplitter is Context, ReentrancyGuard{
     /**
      * @dev Getter for the address of the payee number `index`.
      */
-    function payee(uint256 tokenId, uint256 index) public view
+    function payee(uint256 tokenId, uint256 index) public view override
         checkShares(tokenId)
         returns (address)
     {
         return _payees[tokenId][index];
     }
 
+    function payees(uint256 tokenId) public view override
+        checkShares(tokenId)
+        returns (address[] memory)
+    {
+        return _payees[tokenId];
+    }
+
     /**
      * @dev Returns payee shares and balance
      */
-    function payeeDetails(uint256 tokenId, address account) public view
+    function payeeDetails(uint256 tokenId, address account) public view override
         checkShares(tokenId)
         returns (address, uint256, uint256)
     {
@@ -172,7 +188,8 @@ contract PaymentSplitter is Context, ReentrancyGuard{
      * @dev Triggers a transfer to `account` of the amount of Ether they are owed, according to their percentage of the
      * total shares and their previous withdrawals.
      */
-    function release(uint256 tokenId, address payable account) public virtual
+    function release(uint256 tokenId, address payable account)
+        external virtual
         checkShares(tokenId)
         nonReentrant
     {
