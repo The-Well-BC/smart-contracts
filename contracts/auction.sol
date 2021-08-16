@@ -10,7 +10,7 @@ import {Decimal} from "./Decimal.sol";
 import {TheWellNFT} from "./theWellNFT.sol";
 import {IMarket} from "./IMarket.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./PaymentSplitter.sol";
+import "./IPayments.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract TheWellMarketplace is IMarket, ReentrancyGuard{
@@ -329,14 +329,13 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             //remove ask
             removeAsk(tokenId);
             // Finalize exchange
-            _finalizeNFTTransfer(tokenId, bid.bidder);
-
+            _finalizeBidSale(tokenId, bid.bidder);
         }
     }
 
     /**
      * @notice Accepts a bid from a particular bidder. Can only be called by the media contract.
-     * See {_finalizeNFTTransfer}
+     * See {_finalizeBidSale}
      * Provided bid must match a bid in storage. This is to prevent a race condition
      * where a bid may change while the acceptBid call is in transit.
      * A bid cannot be accepted if it cannot be split equally into its shareholders.
@@ -364,7 +363,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             "Market: Bid invalid for share splitting"
         );
 
-        _finalizeNFTTransfer(tokenId, bid.bidder);
+        _finalizeBidSale(tokenId, bid.bidder);
     }
 
 
@@ -378,104 +377,72 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * the bid to the shareholders. It also transfers the ownership of the media
      * to the bid recipient. Finally, it removes the accepted bid and the current ask.
      */
-    function _finalizeNFTTransfer(uint256 tokenId, address bidder) private {
+    function _finalizeBidSale(uint256 tokenId, address bidder) private {
         Bid memory bid = _tokenBidders[tokenId][bidder];
         BidShares storage bidShares = _bidShares[tokenId];
 
         require(bid.currency == WETH, "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
-        address[] memory addressOfCreators =
-            TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
-        uint256 creatorShare = splitShare(bidShares.creator, bid.amount);
-
-        if (secondarySale[tokenId] == true) {
-            // Transfer bid share to owner of media
-            token.safeTransfer(
-                IERC721(TheWellNFTContract).ownerOf(tokenId),
-                splitShare(bidShares.owner, bid.amount)
-            );
-
-            // Transfer bid share to creator/ceators of media
-            for (uint256 i = 0; i < addressOfCreators.length; i++) {
-                //CALL PAYMENT SPLITTER MAPPING TO GET SHARING PORTIONS FOR THE creator and COLLABORATORS if any
-                uint256 creatorOrcollaboratorShare =
-                    TheWellNFT(TheWellNFTContract).shares(
-                        tokenId,
-                        addressOfCreators[i]
-                    );
-
-                //calculate percentage for  this collaborator
-                uint256 reward =
-                    (creatorOrcollaboratorShare * creatorShare) / 100;
-
-                token.safeTransfer(addressOfCreators[i], reward);
-            }
-
-            // Transfer bid share to previous owner of media
-            if (_previousOwner[tokenId] != address(0)){
-            token.safeTransfer(
-                _previousOwner[tokenId],
-                splitShare(bidShares.prevOwner, bid.amount)
-            );
-            }
-
-
-
-            //set previous owner, turn current nft owner to previous owner then transfer out
-             _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
-
-            // Transfer media to bid recipient
-            TheWellNFT(TheWellNFTContract).safeTransferFrom(
-                IERC721(TheWellNFTContract).ownerOf(tokenId),
-                bid.recipient,
-                tokenId
-            );
-        } else {
-
-            for (uint256 i = 0; i < addressOfCreators.length; i++) {
-                //CALL PAYMENT SPLITTER MAPPING TO GET SHARING PORTIONS FOR THE creator and COLLABORATORS if any
-                uint256 creatorOrcollaboratorShare =
-                    TheWellNFT(TheWellNFTContract).shares(
-                        tokenId,
-                        addressOfCreators[i]
-                    );
-
-                //calculate percentage for  this collaborator
-                uint256 reward =
-                    (creatorOrcollaboratorShare * bid.amount) / 100;
-
-                token.safeTransfer(addressOfCreators[i], reward);
-            }
-                //set previous owner
-                _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
-
-                // Transfer media to bid recipient
-                TheWellNFT(TheWellNFTContract).safeTransferFrom(
-                    IERC721(TheWellNFTContract).ownerOf(tokenId),
-                    bid.recipient,
-                    tokenId
-                );
-
-                // mark first sale as done by makiing secondarySale mapping true
-                secondarySale[tokenId] = true;
-        }
-
-        // Calculate the bid share for the new owner,
-        // equal to 100 - creatorShare - sellOnShare
-        bidShares.owner = Decimal.D256(
-            uint256(100)
-                .mul(Decimal.BASE)
-                .sub(_bidShares[tokenId].creator.value)
-                .sub(bid.sellOnShare.value)
-        );
-        // Set the previous owner share to the accepted bid's sell-on fee
-        bidShares.prevOwner = bid.sellOnShare;
+        _finalizeSale(tokenId, bidder, bid.amount, token);
 
         // Remove the accepted bid
         delete _tokenBidders[tokenId][bidder];
 
         emit BidShareUpdated(tokenId, bidShares);
         emit BidFinalized(tokenId, bid);
+    }
+
+    /**
+     * @notice sends payment tokens the payment splitter contract and initializes NFT transfer
+     */
+
+    function _finalizeSale(uint256 tokenId, address buyer, uint256 amount, IERC20 purchaseToken) private {
+        BidShares storage bidShares = _bidShares[tokenId];
+        address recipient = buyer;
+
+        address[] memory addressOfCreators =
+            TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
+
+        uint256 creatorShare = splitShare(bidShares.creator, amount);
+
+        IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
+        if(secondarySale[tokenId] == true) {
+            // Transfer bid share to owner of media
+            purchaseToken.safeTransfer(
+                IERC721(TheWellNFTContract).ownerOf(tokenId),
+                splitShare(bidShares.owner, amount)
+            );
+
+            // Transfer bid share to previous owner of media
+            if (_previousOwner[tokenId] != address(0)){
+                purchaseToken.safeTransfer(
+                    _previousOwner[tokenId],
+                    splitShare(bidShares.prevOwner, amount)
+                );
+            }
+        } else {
+            // mark first sale as done by makiing secondarySale mapping true
+            setSecondarySale(tokenId);
+        }
+
+        // Transfer tokens to payment contract
+        purchaseToken.safeIncreaseAllowance(
+            address(paymentContract),
+            creatorShare
+        );
+
+        paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
+
+        //set previous owner, turn current nft owner to previous owner then transfer out
+        _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
+
+        // Transfer media to bid recipient
+        TheWellNFT(TheWellNFTContract).nftPurchaseTransfer(
+            tokenId,
+            recipient
+        );
+
+        emit TokenPurchasedERC20(tokenId, amount, address(purchaseToken));
     }
 }
