@@ -10,7 +10,7 @@ import {IMarket} from "./IMarket.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Decimal} from "./Decimal.sol";
 
-contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellAdmin {
+contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     struct Token{
         uint256 priceInEther;
         address owner;
@@ -22,6 +22,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
 
     // Release Time for timelocked NFTs
     mapping(uint256 => uint256) internal ReleaseTime;
+    /* Payments handler contract */
+    IPayments private paymentsContract;
 
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
@@ -116,8 +118,8 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
             shares[i] = _collaboratorRewards[h];
         }
 
-        // Call PaymentSplitter _setShares
-        _setShares(tokenId, payees, shares);
+        // Call PaymentSplitter setShares
+        IPayments(paymentsContract).setShares(tokenId, payees, shares);
 
         return payees;
     }
@@ -206,7 +208,7 @@ contract TheWellNFT is ERC721URIStorage, PaymentSplitter, ReentrancyGuard, WellA
      * @param tokenId_ ID of token
      */
     function tokenCreators(uint256 tokenId_) external view returns (address[] memory) {
-        return _payees[tokenId_];
+        return IPayments(paymentsContract).payees(tokenId_);
     }
 
     // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
