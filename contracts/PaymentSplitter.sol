@@ -63,7 +63,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     modifier checkShares(uint256 tokenId) {
         require(
             _payees[tokenId].length > 0,
-            "PaymentSplitter: no shares set, use _setShares()"
+            "PaymentSplitter: no shares set, use setShares()"
         );
         _;
     }
@@ -82,7 +82,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     }
 
     /**
-     * @dev _setShares can only be set once
+     * @dev setShares can only be set once
      *
      * Creates an instance of `PaymentSplitter` where each account in `payees` is assigned the number of shares at
      * the matching position in the `shares` array.
@@ -90,22 +90,24 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
      * All addresses in `payees` must be non-zero. Both arrays must have the same non-zero length, and there must be no
      * duplicates in `payees`.
      */
-    function _setShares(
-        uint256 tokenId,
-        address[] memory payees,
+    function setShares(
+        uint256 tokenId_,
+        address[] memory payees_,
         uint256[] memory shares_
     ) external nftContractOnly override {
         // Can only be set once
-        require(_payees[tokenId].length == 0, "You can only set shares once");
+        require(_payees[tokenId_].length == 0, "You can only set shares once");
+
+        require(payees_.length > 0, "PaymentSplitter: no payees_");
+        require(maxTenShares(payees_));
 
         require(
-            payees.length == shares_.length,
-            "PaymentSplitter: payees and shares length mismatch"
+            payees_.length == shares_.length,
+            "PaymentSplitter: payees_ and shares length mismatch"
         );
-        require(payees.length > 0, "PaymentSplitter: no payees");
 
-        for (uint256 i = 0; i < payees.length; i++) {
-            _addPayee(tokenId, payees[i], shares_[i]);
+        for (uint256 i = 0; i < payees_.length; i++) {
+            _addPayee(tokenId_, payees_[i], shares_[i]);
         }
     }
 
