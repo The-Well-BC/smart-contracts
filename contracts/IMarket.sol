@@ -95,6 +95,4 @@ interface IMarket {
     function acceptBid(uint256 tokenId, Bid calldata expectedBid) external;
 
     function getWETH() external view  returns(address);
-
-    function setSecondarySale(uint tokenID) external;
 }
