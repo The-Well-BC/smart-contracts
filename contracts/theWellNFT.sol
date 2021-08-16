@@ -46,12 +46,12 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     }
 
     /** @dev checks if function caller is the artist */
-    modifier isArtist(uint256 tokenId) {
-        require(
-            msg.sender == tokenMappings[tokenId].owner,
-            "Only the lead artist can call this function"
-        );
-        _;
+    function isArtist(uint256 tokenId, address caller_) public returns(bool) {
+        return (caller_ == tokenMappings[tokenId].owner);
+    }
+
+    function checkTokenExists(uint256 tokenID) public returns(bool) {
+        return _exists(tokenID);
     }
 
     /**
@@ -70,13 +70,24 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
      * @notice Require that the token has not been burned and has been minted
      */
     modifier onlyExistingToken(uint256 tokenId) {
-        require(_exists(tokenId), "Media: nonexistent token");
+        require(_exists(tokenId));
         _;
     }
 
-    function setAuctionContract(address _auctionContract) public wellAdmin() {
-    // function setAuctionContract(address _auctionContract) public wellAdmin(msg.sender) {
-        auctionContract = _auctionContract;
+    modifier onlyMarketplaceContract() {
+        require(msg.sender == address(marketplaceContractAddress));
+        _;
+    }
+
+    function setMarketplaceContract(IMarket _marketplaceContract) public wellAdmin() {
+        marketplaceContractAddress = _marketplaceContract;
+    }
+
+    function setPaymentContract(IPayments _paymentContract) public wellAdmin() {
+        paymentsContract = _paymentContract;
+    }
+    function getPaymentsContract() public view returns(IPayments paymentContract) {
+        return paymentsContract;
     }
 
     function setBaseURI(string memory uriTemplate_) internal {
