@@ -132,21 +132,33 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         uint8 _artistCut,
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards,
-        string memory contentIpfsHash
-    ) public {
+        string memory _tokenURI,
+        uint _prevOwnerPercentage,
+        uint _ownerPercentage,
+        uint _creatorPercentage
+    ) public nonReentrant {
+
         uint256 tokenId = nextTokenTracker;
         tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
+        address[] memory creators_ = setSplits(
+            tokenId,
+            msg.sender,
+            _artistCut,
+            _collaborators,
+            _collaboratorRewards
+        );
 
-        address[] memory creators_ = setSplits(tokenId, msg.sender, _artistCut,
-            _collaborators, _collaboratorRewards);
+        Decimal.D256 memory prevOwner =  Decimal.D256(_prevOwnerPercentage * 10**18);
+        Decimal.D256 memory owner =  Decimal.D256(_ownerPercentage * 10**18);
+        Decimal.D256 memory creator =  Decimal.D256(_creatorPercentage * 10**18);
+
+        IMarket(marketplaceContractAddress).setBidShares(tokenId, prevOwner, owner, creator);
 
         _safeMint(msg.sender, tokenId);
-
-        _setTokenURI(tokenId, contentIpfsHash);
-
+        _setTokenURI(tokenId, _tokenURI);
         nextTokenTracker++;
 
-        emit MintNFT(tokenId, contentIpfsHash, creators_);
+        emit MintNFT(tokenId, _tokenURI, creators_);
     }
 
     function nftPurchaseTransfer(uint256 tokenId_, address recipient_) external onlyMarketplaceContract {
