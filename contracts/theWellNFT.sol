@@ -18,7 +18,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     }
 
     /* auction contract address */
-    address auctionContract;
+    IMarket marketplaceContractAddress;
 
     /* Payments handler contract */
     IPayments private paymentsContract;
