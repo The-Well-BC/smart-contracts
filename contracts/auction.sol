@@ -221,7 +221,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     {
         require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
-        TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
+        // TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
         tokenAskSet[tokenId] = false;
 
         delete _tokenAsks[tokenId];
@@ -263,7 +263,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
         require(
             currency == WETH,
-            "Market: invalid  Ask currency set, only use WETH address"
+            "Market: invalid ask currency set, only use WETH"
         );
 
         Ask memory ask;
@@ -425,7 +425,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
 
     // function to set secondary sale for a tokenID mapping to true
-    function setSecondarySale(uint tokenID) public onlyMediaCaller override{
+    function setSecondarySale(uint tokenID) private {
         secondarySale[tokenID] = true;
     }
 
