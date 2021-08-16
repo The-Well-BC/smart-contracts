@@ -173,47 +173,6 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     }
 
     /**
-     * @dev Sale function for the NFT
-     * @param tokenId_ - ID of the token being sold
-     */
-
-    //use this function to make sale in ether only
-    function buyToken(uint256 tokenId_) external payable {
-        require(priceIsSet[tokenId_] == true, "token price not yet set ");
-
-        require(
-            /* Checks if token price, eth value sent in this transaction is the same as the priceInEth */
-            msg.value == tokenPrice[tokenId_],
-            "Sent ether not equal to token price "
-        );
-        require(
-            /* Should not fail here. Checks that total collaborators is at most ten */
-            tokenMappings[tokenId_].collaborators.length <= 10,
-            "Error minting NFT. Too many collaborators. Please contact contract creator"
-        );
-
-        // remove ask and unset the token price 
-        priceIsSet[tokenId_] = false;
-        IMarket(auctionContract).removeAsk(tokenId_);
-
-        receivePayment(tokenId_);
-
-        // Should be transfer, not mint
-    }
-
-    event TokenPrice(uint256 ID, uint256 price);
-
-    /* @notice Can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 tokenID, uint256 _ArtPrice) public isArtist(tokenID) {
-        /* assign price in eth to art price */
-        tokenPrice[tokenID] = _ArtPrice;
-        IMarket AuctionContract = IMarket(auctionContract);
-        AuctionContract.setAsk(tokenID, _ArtPrice, AuctionContract.getWETH());
-        priceIsSet[tokenID] = true;
-        emit TokenPrice(tokenID, _ArtPrice);
-    }
-
-    /**
      * Returns addresses of creators of token.
      * @param tokenId_ ID of token
      */
