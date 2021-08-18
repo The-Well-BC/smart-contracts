@@ -25,8 +25,14 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     // Address of the media contract that can call this market
     address payable public TheWellNFTContract;
 
+    //address of the well trasury contract
+    address payable public _TheWellTreasury;
+
     // Mapping from token ID to previous owner address
     mapping (uint256 => address) private _previousOwner;
+
+   //ADRESS denoting ETH;
+    address ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     // WETH contract address
     address public WETH;
@@ -84,9 +90,10 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         _;
     }
 
-    constructor(address _WETH, address OWNER) {
+    constructor(address _WETH, address OWNER, address _TheWellTreasury) {
         WETH = _WETH;
         _owner = OWNER;
+        TheWellTreasury = _TheWellTreasury;
     }
 
     function changeWETHaddress(address _WETH) public {
@@ -373,26 +380,19 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
     /**
      * Purchase a token
-     * Function will accept ether
+     * Function will accept ether, only used for first sale
      */
-    function buyToken(uint256 tokenId_, uint256 amount) external payable {
+    function buyToken(uint256 tokenId_) external payable {
         require(secondarySale[tokenId_] != true);
         require(priceIsSet[tokenId_] == true, "Set token price first");
 
         require(
             /* Checks if amount sent is the equal to token priceInEth */
-            amount == tokenPriceMappings[tokenId_].amount,
-            "NFT: Sent ether must equal NFT price"
+            msg.value == tokenPriceMappings[tokenId_].amount,
+            "Marketplace: Sent ether must equal NFT price"
         );
 
-        // Hold the funds for the duration of transaction
-        purchaseToken.safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
-
-        return _finalizeSale(tokenId_, msg.sender, amount, purchaseToken);
+        _finalizeSale(tokenId_, msg.sender, msg.value, IERC20(ETH));
     }
 
     /**

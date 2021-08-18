@@ -222,7 +222,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
      * @dev Triggers a transfer to `account` of the amount of Ether they are owed, according to their percentage of the
      * total shares and their previous withdrawals.
      */
-    function release(uint256 tokenId, address payable account)
+    function releaseETH(uint256 tokenId, address payable account)
         external virtual
         checkShares(tokenId)
         nonReentrant
@@ -248,7 +248,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         emit PaymentReleased(tokenId, account, payment);
     }
 
-    function release(uint256 tokenId, address payable account, IERC20 paymentToken)
+    function releaseToken(uint256 tokenId, address payable account, IERC20 paymentToken)
         external virtual
         checkShares(tokenId)
         nonReentrant
@@ -264,7 +264,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         ) /
             _totalShares[tokenId];
 
-        require(payment != 0, "PaymentSplitter: account not due payment");
+        require(payment != 0, "PaymentSplitter: account not due payment with this token");
 
         _released[tokenId][account] = _released[tokenId][account] + payment;
         _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
