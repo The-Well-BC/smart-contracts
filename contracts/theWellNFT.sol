@@ -208,26 +208,4 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     function getTokenReleaseTime(uint256 tokenID) public view returns (uint256) {
         return ReleaseTime[tokenID];
     }
-
-    // function removes ask and unsets price
-    function removeAsk(uint256 tokenId) public isArtist(tokenId) nonReentrant onlyExistingToken(tokenId) {
-        priceIsSet[tokenId] = false;
-        IMarket AuctionContract = IMarket(auctionContract);
-        AuctionContract.removeAsk(tokenId);
-    }
-
-    function removeBid(uint256 tokenId) public nonReentrant onlyExistingToken(tokenId) {
-        address bidder = msg.sender;
-        IMarket AuctionContract = IMarket(auctionContract);
-        AuctionContract.removeBid(tokenId, bidder);
-    }
-
-    function acceptBid(uint256 tokenId, IMarket.Bid memory bid) public nonReentrant onlyApprovedOrOwner(msg.sender, tokenId) {
-        IMarket(auctionContract).acceptBid(tokenId, bid);
-    }
-
-    function createBid(uint256 tokenId, IMarket.Bid memory bid) public nonReentrant onlyExistingToken(tokenId) {
-        require(msg.sender == bid.bidder, "Market: Bidder must be msg sender");
-        IMarket(auctionContract).createBid(tokenId, bid, msg.sender);
-    }
 }
