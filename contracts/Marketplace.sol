@@ -48,14 +48,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     //mapping of token ID to bool value for tracking of secondary sales
     mapping(uint256 => bool) public secondarySale;
 
-    struct TokenPrice {
-        uint256 amount;
-        string currency;
-    }
-
     mapping(uint256 => bool) priceIsSet;
-
-    mapping(uint256 => TokenPrice) tokenPriceMappings;
 
     event TokenPriceSet(uint256 ID, uint256 price);
     event TokenPurchased(uint256 ID, uint256 price);
@@ -289,7 +282,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      */
     function createBid(
         uint256 tokenId,
-        Bid calldata bid,
+        Bid memory bid,
         address spender
     ) public override {
         BidShares memory bidShares = _bidShares[tokenId];
@@ -353,17 +346,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /* @notice Can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 tokenID, uint256 _ArtPrice) public nonReentrant {
-        TheWellNFT NFTContract = TheWellNFT(TheWellNFTContract);
-
-        require(NFTContract.isArtist(tokenID, msg.sender), 'Caller is not artist');
-        require(NFTContract.checkTokenExists(tokenID));
-
-        /* assign price in eth to art price */
-        tokenPriceMappings[tokenID] = TokenPrice(_ArtPrice, 'eth');
-
-        priceIsSet[tokenID] = true;
-        emit TokenPriceSet(tokenID, _ArtPrice);
+    function setPrice(uint256 tokenID_, uint256 amount_, address erc20Token) public nonReentrant {
+        return setAsk(tokenID_, amount_, erc20Token);
     }
 
     /**
@@ -371,23 +355,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * Function will accept ether and an erc20 token
      */
     function buyToken(uint256 tokenId_, uint256 amount, IERC20 purchaseToken) external {
-        require(secondarySale[tokenId_] != true);
-        require(priceIsSet[tokenId_] == true, "Set token price first");
-
-        require(
-            /* Checks if amount sent is the equal to token priceInEth */
-            amount == tokenPriceMappings[tokenId_].amount,
-            "NFT: Sent ether must equal NFT price"
-        );
-
-        // Hold the funds for the duration of transaction
-        purchaseToken.transferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
-
-        return _finalizeSale(tokenId_, msg.sender, amount, purchaseToken);
+        return createBid(tokenId_,
+                             Bid(amount, address(purchaseToken), msg.sender, msg.sender, Decimal.D256(25)),
+                             msg.sender);
     }
 
     /**
