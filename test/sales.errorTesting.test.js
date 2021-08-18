@@ -46,42 +46,30 @@ describe('Error Testing: NFT sales', function() {
                         creators.collaborators.map(c => c.address),
                         [20, 10, 5],
                         'Qmblah123.json',
-                        15, creatorsRoyalties, 35
+                        15, 35, creatorsRoyalties
                     )
                 })
             )
                 .then(res => Promise.all(res.map(re => re.wait())))
                 .then(res => {
-                    console.log('RESPONSE:', res);
-                    tokenIDs = res.map(r => {
-                        return r.events.filter(log => log.event == 'Transfer')[0]
-                                .args.tokenId.toString();
+                    res.forEach((r, index) => {
+                        creatorArr[index].tokenIDs = [];
+
+                        creatorArr[index].tokenIDs.push(
+                            r.events.filter(log => log.event == 'Transfer')[0]
+                                .args.tokenId.toString()
+                        );
                     });
 
-                    console.log('TOKEN IDS:', tokenIDs);
-
-                    return Promise.all( tokenIDs.map(tokenID => 
-                        marketplace.connect(artistWallet).setPrice(tokenID, tokenPrice)
+                    return Promise.all( creatorArr.map(creators => 
+                        marketplace.connect(creators.artist).setPrice(creators.tokenIDs[0], tokenPrice)
                     ));
                 }).then(() => {
-                    return Promise.all( tokenIDs.map(tokenID => 
-                        theWellNFT.connect(artistWallet).approve(marketplace.address, tokenID)
+                    return Promise.all( creatorArr.map(creators => 
+                        theWellNFT.connect(creators.artist).approve(marketplace.address, creators.tokenIDs[0])
                     ));
                 });
         });
-        /*
-        it('Buyer should own NFT after purchase', function() {
-            let buyer = accounts[0];
-
-            return marketplace.connect(buyer).buyToken(tokenID, {value: tokenPrice})
-                .then(res => res.wait())
-                .then(res => {
-                    return theWellNFT.connect(buyer).ownerOf(tokenID)
-                }).then(res => {
-                    expect(res).to.equal(buyer.address);
-                });
-        });
-        */
 
         it('Fail on non-collaborator withdraw');
 

@@ -13,9 +13,9 @@ const deploy = require('./deploy');
 let theWellNFT, marketplace, weth;
 
 let oneEth = '2000000000000000000';
-let tokenID, tokenPrice = (parseInt(oneEth) / 6).toString();
+let tokenID, tokenPrice = '30000000';
 
-describe('Test: NFT sales', function() {
+describe('Test: Royalties from NFT sales', function() {
     let accounts,
         artist, collaborators;
 
@@ -47,7 +47,7 @@ describe('Test: NFT sales', function() {
                 collaborators.map(c => c.address),
                 collaboratorPercentages,
                 'Qmblah123.json',
-                15, creatorsRoyalties, 35
+                15, 35, creatorsRoyalties
             )
                 .then(res => res.wait())
                 .then(res => {
@@ -73,7 +73,7 @@ describe('Test: NFT sales', function() {
             console.log(' TOKEN PRICE:', tokenPrice);
             return weth.balanceOf(payments.address)
             .then(res => {
-                expect(res.toString()).to.equal(
+                expect(parseInt(res.toString())).to.equal(
                     tokenPrice * (creatorsRoyalties/100)
                 );
             });
@@ -88,7 +88,7 @@ describe('Test: NFT sales', function() {
                 .then(res => {
                     return weth.balanceOf(artist.address);
                 }).then(res => {
-                    expect(res.toString()).to.equal(artistShares);
+                    expect(parseInt(res.toString())).to.equal(artistShares);
                 });
         });
         it('Check collaborators\' shares', function() {
@@ -109,7 +109,7 @@ describe('Test: NFT sales', function() {
                 })
                 .then(res => {
                     console.log('Total collaborator shares', res);
-                    expect(res.map(i => i.toString())).to.eql(collaboratorShares);
+                    expect(res.map(i => parseInt(i.toString()))).to.eql(collaboratorShares);
                 });
         });
     });
