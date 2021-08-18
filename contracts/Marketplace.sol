@@ -97,8 +97,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         _validPurchaseToken[purchaseToken_] = false;
     }
 
-    function isValidToken(address token_) public view override returns (bool) {
-        return _validPurchaseToken(token_);
+    function isValidToken(address token_) public view returns (bool) {
+        return _validPurchaseToken[token_];
     }
 
     function configure(address payable theWellNFTContract) external override {
@@ -237,7 +237,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint256 bidAmount = bid.amount;
         address bidCurrency = bid.currency;
 
-        require(_validPurchaseToken(bidCurrency) == true);
+        require(_validPurchaseToken[bidCurrency] == true);
         require(bid.amount > 0, "Market: cannot remove bid amount of 0");
 
         IERC20 token = IERC20(bidCurrency);
@@ -263,7 +263,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
 
         require(
-            _validPurchaseToken(currency),
+            _validPurchaseToken[currency],
             "Market: invalid ask currency set"
         );
 
@@ -306,7 +306,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             "Market: bid currency cannot be 0 address"
         );
         require(
-            _validPurchaseToken(bid.currency),
+            _validPurchaseToken[bid.currency],
             "'Market: invalid bid currency set'"
         );
         require(
@@ -343,7 +343,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         if (
             _tokenAsks[tokenId].currency != address(0) &&
             bid.currency == _tokenAsks[tokenId].currency &&
-            _validPurchaseToken(bid.currency) &&
+            _validPurchaseToken[bid.currency] &&
             bid.amount >= _tokenAsks[tokenId].amount
         ) {
             //remove ask
@@ -388,7 +388,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         require(
             bid.amount == expectedBid.amount &&
                 bid.currency == expectedBid.currency &&
-                _validPurchaseToken(bid.currency) &&
+                _validPurchaseToken[bid.currency] &&
                 bid.sellOnShare.value == expectedBid.sellOnShare.value &&
                 bid.recipient == expectedBid.recipient,
             "Market: Unexpected bid found."
@@ -416,7 +416,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         Bid memory bid = _tokenBidders[tokenId][bidder];
         BidShares storage bidShares = _bidShares[tokenId];
 
-        require(_validPurchaseToken(bid.currency), "MARKET: Invalid bid currency");
+        require(_validPurchaseToken[bid.currency], "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
         _finalizeSale(tokenId, bidder, bid.amount, token);
