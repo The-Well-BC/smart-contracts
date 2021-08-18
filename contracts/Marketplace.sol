@@ -27,8 +27,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     // Mapping from token ID to previous owner address
     mapping (uint256 => address) private _previousOwner;
 
-    // WETH contract address
-    address public WETH;
+    // Allowed purchase tokens
+    mapping(address => bool) public _validPurchaseToken;
 
     // address that can call admin functions
     address private _owner;
@@ -76,21 +76,29 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         _;
     }
 
-    constructor(address _WETH, address OWNER) {
-        WETH = _WETH;
+    constructor(address OWNER) {
         _owner = OWNER;
     }
 
-    function changeWETHaddress(address _WETH) public {
+    function addPurchaseToken(address purchaseToken_) public {
         require(
             msg.sender == _owner,
             "Permission denied; CALLER ADDRESS NOT OWNER"
         );
-        WETH = _WETH;
+        _validPurchaseToken[purchaseToken_] = true;
     }
 
-    function getWETH() public view override returns (address) {
-        return WETH;
+    function removePurchaseToken(address purchaseToken_) public {
+        require(
+            msg.sender == _owner,
+            "Permission denied; CALLER ADDRESS NOT OWNER"
+        );
+
+        _validPurchaseToken[purchaseToken_] = false;
+    }
+
+    function isValidToken(address token_) public view override returns (bool) {
+        return _validPurchaseToken(token_);
     }
 
     function configure(address payable theWellNFTContract) external override {
@@ -229,7 +237,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint256 bidAmount = bid.amount;
         address bidCurrency = bid.currency;
 
-        require(bidCurrency == WETH);
+        require(_validPurchaseToken(bidCurrency) == true);
         require(bid.amount > 0, "Market: cannot remove bid amount of 0");
 
         IERC20 token = IERC20(bidCurrency);
@@ -255,8 +263,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
 
         require(
-            currency == WETH,
-            "Market: invalid ask currency set, only use WETH"
+            _validPurchaseToken(currency),
+            "Market: invalid ask currency set"
         );
 
         Ask memory ask;
@@ -298,8 +306,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             "Market: bid currency cannot be 0 address"
         );
         require(
-            bid.currency == WETH,
-            "'Market: invalid bid currency set, only use WETH address'"
+            _validPurchaseToken(bid.currency),
+            "'Market: invalid bid currency set'"
         );
         require(
             bid.recipient != address(0),
@@ -335,7 +343,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         if (
             _tokenAsks[tokenId].currency != address(0) &&
             bid.currency == _tokenAsks[tokenId].currency &&
-            bid.currency == WETH &&
+            _validPurchaseToken(bid.currency) &&
             bid.amount >= _tokenAsks[tokenId].amount
         ) {
             //remove ask
@@ -380,7 +388,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         require(
             bid.amount == expectedBid.amount &&
                 bid.currency == expectedBid.currency &&
-                bid.currency == WETH &&
+                _validPurchaseToken(bid.currency) &&
                 bid.sellOnShare.value == expectedBid.sellOnShare.value &&
                 bid.recipient == expectedBid.recipient,
             "Market: Unexpected bid found."
@@ -408,7 +416,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         Bid memory bid = _tokenBidders[tokenId][bidder];
         BidShares storage bidShares = _bidShares[tokenId];
 
-        require(bid.currency == WETH, "MARKET: Invalid bid currency");
+        require(_validPurchaseToken(bid.currency), "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
         _finalizeSale(tokenId, bidder, bid.amount, token);
