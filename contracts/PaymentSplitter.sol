@@ -112,7 +112,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     }
 
     function receivePayment(uint256 tokenId) internal checkShares(tokenId) {
-        paymentForToken[tokenId] += msg.value;
+        paymentForToken[tokenId] = msg.value;
 
         emit PaymentReceived(tokenId, _msgSender(), msg.value);
     }
@@ -126,7 +126,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
 
         IERC20(paymentToken).safeTransferFrom(buyer, address(this), paymentAmount);
 
-        erc20PaymentsReceived[paymentToken][tokenID] += paymentAmount;
+        erc20PaymentsReceived[paymentToken][tokenID] = paymentAmount;
 
         emit PaymentReceivedERC20(tokenID, buyer, paymentAmount, address(paymentToken));
         return true;
@@ -142,7 +142,6 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
      * functions].
      */
     receive() external payable virtual override {
-        revert();
     }
 
     /**
