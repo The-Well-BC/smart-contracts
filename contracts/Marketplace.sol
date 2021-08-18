@@ -480,8 +480,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint newAmount = amount - amountForFees;
         purchaseToken.transfer(TheWellTreasury, amountForFees);
 
-
-
         address[] memory addressOfCreators =
             TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
 
