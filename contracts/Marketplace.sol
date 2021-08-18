@@ -37,6 +37,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     // WETH contract address
     address public WETH;
 
+    // Allowed purchase tokens
+    mapping(address => bool) public _validPurchaseToken;
+
     // address that can call admin functions
     address private _owner;
 
@@ -55,14 +58,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     //mapping of token ID to bool value for tracking of secondary sales
     mapping(uint256 => bool) public secondarySale;
 
-    struct TokenPrice {
-        uint256 amount;
-        string currency;
-    }
-
     mapping(uint256 => bool) priceIsSet;
-
-    mapping(uint256 => TokenPrice) tokenPriceMappings;
 
     event TokenPriceSet(uint256 ID, uint256 price);
     event TokenPurchased(uint256 ID, uint256 price);
@@ -75,7 +71,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      */
 
      modifier ownerOrTheWell(uint tokenId){
-         require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'AUCTION: Not token owner or token contract');
+         require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner or token contract');
          _;
      }
 
@@ -90,22 +86,32 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         _;
     }
 
+
     constructor(address _WETH, address OWNER, address _TheWellTreasury) {
         WETH = _WETH;
         _owner = OWNER;
         TheWellTreasury = _TheWellTreasury;
     }
 
-    function changeWETHaddress(address _WETH) public {
+    function addPurchaseToken(address purchaseToken_) public {
         require(
             msg.sender == _owner,
             "Permission denied; CALLER ADDRESS NOT OWNER"
         );
-        WETH = _WETH;
+        _validPurchaseToken[purchaseToken_] = true;
     }
 
-    function getWETH() public view override returns (address) {
-        return WETH;
+    function removePurchaseToken(address purchaseToken_) public {
+        require(
+            msg.sender == _owner,
+            "Permission denied; CALLER ADDRESS NOT OWNER"
+        );
+
+        _validPurchaseToken[purchaseToken_] = false;
+    }
+
+    function isValidToken(address token_) public view returns (bool) {
+        return _validPurchaseToken[token_];
     }
 
     function configure(address payable theWellNFTContract) external override {
@@ -176,6 +182,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             isValidBidShares(bidShares),
             "Market: Invalid bid shares for token"
         );
+
         return
             bidAmount != 0 &&
             (bidAmount ==
@@ -224,15 +231,19 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     /**
      * @notice removes an ask for a token and emits an AskRemoved event
      */
-    function removeAsk(uint256 tokenId) public override
-        ownerOrTheWell(tokenId) nonReentrant
-    {
-        require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
+    function _removeAsk(uint256 tokenId) private nonReentrant {
+        require(tokenAskSet[tokenId] == true, 'Market: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
         // TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
         tokenAskSet[tokenId] = false;
 
         delete _tokenAsks[tokenId];
+    }
+
+    function removeAsk(uint256 tokenId) external override
+        ownerOrTheWell(tokenId) nonReentrant
+    {
+        return _removeAsk(tokenId);
     }
 
     function removeBid(uint256 tokenId, address bidder)
@@ -244,7 +255,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint256 bidAmount = bid.amount;
         address bidCurrency = bid.currency;
 
-        require(bidCurrency == WETH);
+        require(_validPurchaseToken[bidCurrency] == true);
         require(bid.amount > 0, "Market: cannot remove bid amount of 0");
 
         IERC20 token = IERC20(bidCurrency);
@@ -270,8 +281,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
 
         require(
-            currency == WETH,
-            "Market: invalid ask currency set, only use WETH"
+            _validPurchaseToken[currency],
+            "Market: invalid ask currency set"
         );
 
         Ask memory ask;
@@ -297,7 +308,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      */
     function createBid(
         uint256 tokenId,
-        Bid calldata bid,
+        Bid memory bid,
         address spender
     ) public override {
         BidShares memory bidShares = _bidShares[tokenId];
@@ -319,6 +330,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         require(
             bid.currency == WETH || bid.currency == WELL ,
             "'Market: invalid bid currency set, only use WETH OR WELL address"
+            _validPurchaseToken[bid.currency],
+            "Market: invalid purchase currency"
         );
         require(
             bid.recipient != address(0),
@@ -354,28 +367,19 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         if (
             _tokenAsks[tokenId].currency != address(0) &&
             bid.currency == _tokenAsks[tokenId].currency &&
-            bid.currency == WETH &&
+            _validPurchaseToken[bid.currency] &&
             bid.amount >= _tokenAsks[tokenId].amount
         ) {
             //remove ask
-            removeAsk(tokenId);
+            _removeAsk(tokenId);
             // Finalize exchange
             _finalizeBidSale(tokenId, bid.bidder);
         }
     }
 
     /* @notice Can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 tokenID, uint256 _ArtPrice) public nonReentrant {
-        TheWellNFT NFTContract = TheWellNFT(TheWellNFTContract);
-
-        require(NFTContract.isArtist(tokenID, msg.sender), 'Caller is not artist');
-        require(NFTContract.checkTokenExists(tokenID));
-
-        /* assign price in eth to art price */
-        tokenPriceMappings[tokenID] = TokenPrice(_ArtPrice, 'eth');
-
-        priceIsSet[tokenID] = true;
-        emit TokenPriceSet(tokenID, _ArtPrice);
+    function setPrice(uint256 tokenID_, uint256 amount_, address erc20Token) public nonReentrant {
+        return setAsk(tokenID_, amount_, erc20Token);
     }
 
     /**
@@ -393,6 +397,13 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
 
         _finalizeSale(tokenId_, msg.sender, msg.value, IERC20(ETH));
+
+    }   
+    function buyToken(uint256 tokenId_, uint256 amount, IERC20 purchaseToken) external {
+        require(amount == _tokenAsks[tokenId_].amount, 'Marketplace: Wrong price');
+        return createBid(tokenId_,
+                             Bid(amount, address(purchaseToken), msg.sender, msg.sender, Decimal.D256(25)),
+                             msg.sender);
     }
 
     /**
@@ -409,13 +420,13 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         override
         nonReentrant
     {
-        require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'AUCTION: cannot accept bid, not token owner');
+        require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'Market: cannot accept bid, not token owner');
         Bid memory bid = _tokenBidders[tokenId][expectedBid.bidder];
         require(bid.amount > 0, "Market: cannot accept bid of 0");
         require(
             bid.amount == expectedBid.amount &&
                 bid.currency == expectedBid.currency &&
-                bid.currency == WETH &&
+                _validPurchaseToken[bid.currency] &&
                 bid.sellOnShare.value == expectedBid.sellOnShare.value &&
                 bid.recipient == expectedBid.recipient,
             "Market: Unexpected bid found."
@@ -443,7 +454,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         Bid memory bid = _tokenBidders[tokenId][bidder];
         BidShares storage bidShares = _bidShares[tokenId];
 
-        require(bid.currency == WETH, "MARKET: Invalid bid currency");
+        require(_validPurchaseToken[bid.currency], "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
         _finalizeSale(tokenId, bidder, bid.amount, token);
@@ -496,11 +507,12 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             setSecondarySale(tokenId);
         }
 
-        // Transfer tokens to payment contract
-        purchaseToken.safeIncreaseAllowance(
-            address(paymentContract),
-            creatorShare
-        );
+        bool setPaymentContractAllowance;
+
+
+        uint256 newAllowance = purchaseToken.allowance(address(this), address(paymentContract)) + creatorShare;
+        setPaymentContractAllowance = purchaseToken.approve(address(paymentContract), newAllowance);
+        require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
 
         paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
 

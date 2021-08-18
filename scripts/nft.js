@@ -8,7 +8,7 @@ module.exports = async function main(auctionToken, baseURI = '') {
     // NFT contract
     const nft = await TheWellNFT.deploy('The Well NFT', 'WELLNFT', baseURI);
     // Marketplace contract
-    const marketplace = await Marketplace.deploy(auctionToken.address, signers[0].address);
+    const marketplace = await Marketplace.deploy(signers[0].address);
 
     await nft.deployed();
     await marketplace.deployed();

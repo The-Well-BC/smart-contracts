@@ -75,6 +75,7 @@ describe('Test subdomain registration', function() {
             .then(() => Registrar.connect(signer).register(subdomain, signer.address))
             .then(async res => {
                 registerTx = await res.wait();
+                console.log('REGIS TER TX:', registerTx.events);
             })
         })
 
