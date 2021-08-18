@@ -381,7 +381,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
 
         // Hold the funds for the duration of transaction
-        purchaseToken.safeTransferFrom(
+        purchaseToken.transferFrom(
             msg.sender,
             address(this),
             amount
@@ -483,11 +483,14 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             setSecondarySale(tokenId);
         }
 
-        // Transfer tokens to payment contract
-        purchaseToken.safeIncreaseAllowance(
-            address(paymentContract),
-            creatorShare
-        );
+        bool setPaymentContractAllowance;
+
+
+        uint256 newAllowance = purchaseToken.allowance(address(this), address(paymentContract)) + creatorShare;
+        purchaseToken.approve(address(paymentContract), newAllowance);
+        /*
+           require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
+        */
 
         paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
 
