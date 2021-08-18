@@ -217,15 +217,19 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     /**
      * @notice removes an ask for a token and emits an AskRemoved event
      */
-    function removeAsk(uint256 tokenId) public override
-        ownerOrTheWell(tokenId) nonReentrant
-    {
-        require(tokenAskSet[tokenId] == true, 'AUCTION: token ask not set');
+    function _removeAsk(uint256 tokenId) private nonReentrant {
+        require(tokenAskSet[tokenId] == true, 'Market: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
         // TheWellNFT(TheWellNFTContract).unsetPrice(tokenId);
         tokenAskSet[tokenId] = false;
 
         delete _tokenAsks[tokenId];
+    }
+
+    function removeAsk(uint256 tokenId) external override
+        ownerOrTheWell(tokenId) nonReentrant
+    {
+        return _removeAsk(tokenId);
     }
 
     function removeBid(uint256 tokenId, address bidder)
@@ -347,7 +351,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             bid.amount >= _tokenAsks[tokenId].amount
         ) {
             //remove ask
-            removeAsk(tokenId);
+            _removeAsk(tokenId);
             // Finalize exchange
             _finalizeBidSale(tokenId, bid.bidder);
         }
