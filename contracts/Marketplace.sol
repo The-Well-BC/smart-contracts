@@ -61,7 +61,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      */
 
      modifier ownerOrTheWell(uint tokenId){
-         require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'AUCTION: Not token owner or token contract');
+         require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner or token contract');
          _;
      }
 
@@ -169,6 +169,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             isValidBidShares(bidShares),
             "Market: Invalid bid shares for token"
         );
+
         return
             bidAmount != 0 &&
             (bidAmount ==
@@ -311,7 +312,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
         require(
             _validPurchaseToken[bid.currency],
-            "'Market: invalid bid currency set'"
+            "Market: invalid purchase currency"
         );
         require(
             bid.recipient != address(0),
@@ -386,7 +387,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         override
         nonReentrant
     {
-        require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'AUCTION: cannot accept bid, not token owner');
+        require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'Market: cannot accept bid, not token owner');
         Bid memory bid = _tokenBidders[tokenId][expectedBid.bidder];
         require(bid.amount > 0, "Market: cannot accept bid of 0");
         require(
@@ -439,9 +440,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     function _finalizeSale(uint256 tokenId, address buyer, uint256 amount, IERC20 purchaseToken) private {
         BidShares storage bidShares = _bidShares[tokenId];
         address recipient = buyer;
-
-        address[] memory addressOfCreators =
-            TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
 
         uint256 creatorShare = splitShare(bidShares.creator, amount);
 
