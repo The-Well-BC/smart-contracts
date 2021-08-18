@@ -368,6 +368,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * Function will accept ether and an erc20 token
      */
     function buyToken(uint256 tokenId_, uint256 amount, IERC20 purchaseToken) external {
+        require(amount == _tokenAsks[tokenId_].amount, 'Marketplace: Wrong price');
         return createBid(tokenId_,
                              Bid(amount, address(purchaseToken), msg.sender, msg.sender, Decimal.D256(25)),
                              msg.sender);
