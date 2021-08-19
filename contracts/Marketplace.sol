@@ -39,9 +39,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     //address denoting ETH;
     address ETH;
 
-    // WETH contract address
-    address public WETH;
-
     // Allowed purchase tokens
     mapping(address => bool) public _validPurchaseToken;
 
@@ -75,8 +72,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * *********
      */
 
-    constructor(address _WETH, address OWNER, address payable TheWellTreasury_) {
-        WETH = _WETH;
+    constructor(address OWNER, address payable TheWellTreasury_) {
         _owner = OWNER;
         _TheWellTreasury = TheWellTreasury_;
         ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
