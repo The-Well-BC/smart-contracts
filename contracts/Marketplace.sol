@@ -24,8 +24,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * *******
      */
 
-     //eth bal after last eth paid as bid  
-     uint balanceAfterLastEthTransfer;
+    //eth bal after last eth paid as bid  
+    uint balanceAfterLastEthTransfer;
 
     // Address of the media contract that can call this market
     address payable public TheWellNFTContract;
@@ -36,7 +36,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     // Mapping from token ID to previous owner address
     mapping (uint256 => address) private _previousOwner;
 
-   //address denoting ETH;
+    //address denoting ETH;
     address ETH;
 
     // WETH contract address
@@ -57,7 +57,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     // Mapping from token to the current ask for the token
     mapping(uint256 => Ask) private _tokenAsks;
 
-// mapping to track if assk for a token is set
+    // mapping to track if assk for a token is set
     mapping (uint256 => bool) public  tokenAskSet;
 
     //mapping of token ID to bool value for tracking of secondary sales
@@ -71,25 +71,25 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
 
     /* *********
-     * Modifiers
-     * *********
+    * Modifiers
+    * *********
      */
 
-         constructor(address _WETH, address OWNER, address _TheWellTreasury) {
+    constructor(address _WETH, address OWNER, address payable TheWellTreasury_) {
         WETH = _WETH;
         _owner = OWNER;
-        TheWellTreasury = _TheWellTreasury;
+        _TheWellTreasury = TheWellTreasury_;
         ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     }
 
-     modifier ownerOrTheWell(uint tokenId){
-         require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner or token contract');
-         _;
-     }
+    modifier ownerOrTheWell(uint tokenId){
+        require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner or token contract');
+        _;
+    }
 
     /**
-     * @notice require that the msg.sender is the configured media contract
-     */
+    * @notice require that the msg.sender is the configured media contract
+    */
     modifier onlyMediaCaller() {
         require(
             TheWellNFTContract == msg.sender,
@@ -131,31 +131,31 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     function currentAskForToken(uint256 tokenId)
-        external
-        view
-        override
-        returns (Ask memory)
+    external
+    view
+    override
+    returns (Ask memory)
     {
         return _tokenAsks[tokenId];
     }
 
     function bidSharesForToken(uint256 tokenId)
-        public
-        view
-        override
-        returns (BidShares memory)
+    public
+    view
+    override
+    returns (BidShares memory)
     {
         return _bidShares[tokenId];
     }
 
     /**
-     * @notice Sets bid shares for a particular tokenId. These bid shares must
-     * sum to 100
-     */
+    * @notice Sets bid shares for a particular tokenId. These bid shares must
+    * sum to 100
+    */
     function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata __owner, Decimal.D256 calldata _creator)
-        public
-        override
-        onlyMediaCaller
+    public
+    override
+    onlyMediaCaller
     {
         BidShares memory bidShares;
         bidShares.prevOwner = _prevOwner;
@@ -171,16 +171,16 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * @notice Validates that the bid is valid by ensuring that the bid amount can be split perfectly into all the bid shares.
-     *  We do this by comparing the sum of the individual share values with the amount and ensuring they are equal. Because
-     *  the splitShare function uses integer division, any inconsistencies with the original and split sums would be due to
-     *  a bid splitting that does not perfectly divide the bid amount.
-     */
+    * @notice Validates that the bid is valid by ensuring that the bid amount can be split perfectly into all the bid shares.
+    *  We do this by comparing the sum of the individual share values with the amount and ensuring they are equal. Because
+    *  the splitShare function uses integer division, any inconsistencies with the original and split sums would be due to
+    *  a bid splitting that does not perfectly divide the bid amount.
+        */
     function isValidBid(uint256 tokenId, uint256 bidAmount)
-        public
-        view
-        override
-        returns (bool)
+    public
+    view
+    override
+    returns (bool)
     {
         BidShares memory bidShares = bidSharesForToken(tokenId);
         require(
@@ -189,53 +189,53 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         );
 
         return
-            bidAmount != 0 &&
+        bidAmount != 0 &&
             (bidAmount ==
-                splitShare(bidShares.creator, bidAmount)
-                    .add(splitShare(bidShares.prevOwner, bidAmount))
-                    .add(splitShare(bidShares.owner, bidAmount)));
+             splitShare(bidShares.creator, bidAmount)
+        .add(splitShare(bidShares.prevOwner, bidAmount))
+        .add(splitShare(bidShares.owner, bidAmount)));
     }
 
     function bidForTokenBidder(uint256 tokenId, address bidder)
-        external
-        view
-        override
-        returns (Bid memory)
+    external
+    view
+    override
+    returns (Bid memory)
     {
         return _tokenBidders[tokenId][bidder];
     }
 
     /**
-     * @notice Validates that the provided bid shares sum to 100
-     */
+    * @notice Validates that the provided bid shares sum to 100
+    */
     function isValidBidShares(BidShares memory bidShares)
-        public
-        pure
-        override
-        returns (bool)
+    public
+    pure
+    override
+    returns (bool)
     {
         return
-            bidShares.creator.value.add(bidShares.owner.value).add(
-                bidShares.prevOwner.value
-            ) == uint256(100).mul(Decimal.BASE);
+        bidShares.creator.value.add(bidShares.owner.value).add(
+            bidShares.prevOwner.value
+        ) == uint256(100).mul(Decimal.BASE);
     }
 
     /**
-     * @notice return a % of the specified amount. This function is used to split a bid into shares
-     * for a media's shareholders.
-     */
+    * @notice return a % of the specified amount. This function is used to split a bid into shares
+    * for a media's shareholders.
+        */
     function splitShare(Decimal.D256 memory sharePercentage, uint256 amount)
-        public
-        pure
-        override
-        returns (uint256)
+    public
+    pure
+    override
+    returns (uint256)
     {
         return Decimal.mul(amount, sharePercentage).div(100);
     }
 
     /**
-     * @notice removes an ask for a token and emits an AskRemoved event
-     */
+    * @notice removes an ask for a token and emits an AskRemoved event
+    */
     function _removeAsk(uint256 tokenId) private nonReentrant {
         require(tokenAskSet[tokenId] == true, 'Market: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
@@ -246,14 +246,14 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     function removeAsk(uint256 tokenId) external override
-        ownerOrTheWell(tokenId) nonReentrant
+    ownerOrTheWell(tokenId) nonReentrant
     {
         return _removeAsk(tokenId);
     }
 
     function removeBid(uint256 tokenId, address bidder)
-        public
-        override
+    public
+    override
     {
         require(bidder == msg.sender, 'bidder must be msgsender');
         Bid storage bid = _tokenBidders[tokenId][bidder];
@@ -271,9 +271,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * @notice Sets the ask on a particular media. If the ask cannot be evenly split into the media's
-     * bid shares, this reverts.
-     */
+    * @notice Sets the ask on a particular media. If the ask cannot be evenly split into the media's
+    * bid shares, this reverts.
+    */
     function setAsk(
         uint256 tokenId,
         uint256 amount,
@@ -300,8 +300,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * Getter fn for address of previous owner of token
-     */
+    * Getter fn for address of previous owner of token
+    */
 
     function previousOwner(uint tokenID) public view returns (address) {
         require( _previousOwner[tokenID] != address(0), "ERC721: previous owner query gives invalid address");
@@ -309,8 +309,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * Bid on token
-     */
+    * Bid on token
+    */
     function createBid(
         uint256 tokenId,
         Bid memory bid,
@@ -319,7 +319,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         BidShares memory bidShares = _bidShares[tokenId];
         require(
             bidShares.creator.value.add(bid.sellOnShare.value) <=
-                uint256(100).mul(Decimal.BASE),
+            uint256(100).mul(Decimal.BASE),
             "Market: Sell on fee invalid for share splitting"
         );
         require(bid.bidder != address(0), "Market: bidder cannot be 0 address");
@@ -329,7 +329,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             "Market: bid currency cannot be 0 address"
         );
         require(
-            ERC20(bid.currency).decimals() === 18,
+            ERC20(bid.currency).decimals() == 18,
             "'Market: invalid bid currency, decimals not 18"
         );
         require(
@@ -354,28 +354,28 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         // as some tokens impose a transfer fee and would not actually transfer the
         // full amount to the market, resulting in locked funds for refunds & bid acceptance
         if( token == IERC20(ETH)) {
-        require( bid.amount == msg.value, 'bid amount not equal to ether sent'); 
-        
+            require( bid.amount == msg.value, 'bid amount not equal to ether sent'); 
 
-        _tokenBidders[tokenId][bid.bidder] = Bid(
-            bid.amount,
-            bid.currency,
-            bid.bidder,
-            bid.recipient,
-            bid.sellOnShare
-        );
+
+            _tokenBidders[tokenId][bid.bidder] = Bid(
+                bid.amount,
+                bid.currency,
+                bid.bidder,
+                bid.recipient,
+                bid.sellOnShare
+            );
         } else {
 
-        uint256 beforeTransferBalance = token.balanceOf(address(this));
-        token.safeTransferFrom(spender, address(this), bid.amount);
-        uint256 afterTransferBalance = token.balanceOf(address(this));
-        _tokenBidders[tokenId][bid.bidder] = Bid(
-            afterTransferBalance.sub(beforeTransferBalance),
-            bid.currency,
-            bid.bidder,
-            bid.recipient,
-            bid.sellOnShare
-        );
+            uint256 beforeTransferBalance = token.balanceOf(address(this));
+            token.safeTransferFrom(spender, address(this), bid.amount);
+            uint256 afterTransferBalance = token.balanceOf(address(this));
+            _tokenBidders[tokenId][bid.bidder] = Bid(
+                afterTransferBalance.sub(beforeTransferBalance),
+                bid.currency,
+                bid.bidder,
+                bid.recipient,
+                bid.sellOnShare
+            );
         }
         emit BidCreated(tokenId, bid);
 
@@ -383,9 +383,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         // If no ask is set or the bid does not meet the requirements, ignore.
         if (
             _tokenAsks[tokenId].currency != address(0) &&
-            bid.currency == _tokenAsks[tokenId].currency &&
-            _validPurchaseToken[bid.currency] &&
-            bid.amount >= _tokenAsks[tokenId].amount
+                bid.currency == _tokenAsks[tokenId].currency &&
+                    _validPurchaseToken[bid.currency] &&
+                        bid.amount >= _tokenAsks[tokenId].amount
         ) {
             //remove ask
             _removeAsk(tokenId);
@@ -395,28 +395,28 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * @notice Accepts a bid from a particular bidder. Can only be called by the media contract.
-     * See {_finalizeBidSale}
-     * Provided bid must match a bid in storage. This is to prevent a race condition
-     * where a bid may change while the acceptBid call is in transit.
-     * A bid cannot be accepted if it cannot be split equally into its shareholders.
-     * This should only revert in rare instances (example, a low bid with a zero-decimal token),
-     * but is necessary to ensure fairness to all shareholders.
+    * @notice Accepts a bid from a particular bidder. Can only be called by the media contract.
+    * See {_finalizeBidSale}
+    * Provided bid must match a bid in storage. This is to prevent a race condition
+    * where a bid may change while the acceptBid call is in transit.
+    * A bid cannot be accepted if it cannot be split equally into its shareholders.
+    * This should only revert in rare instances (example, a low bid with a zero-decimal token),
+    * but is necessary to ensure fairness to all shareholders.
      */
     function acceptBid(uint256 tokenId, Bid calldata expectedBid)
-        public
-        override
-        nonReentrant
+    public
+    override
+    nonReentrant
     {
         require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'Market: cannot accept bid, not token owner');
         Bid memory bid = _tokenBidders[tokenId][expectedBid.bidder];
         require(bid.amount > 0, "Market: cannot accept bid of 0");
         require(
             bid.amount == expectedBid.amount &&
-                bid.currency == expectedBid.currency &&
-                _validPurchaseToken[bid.currency] &&
-                bid.sellOnShare.value == expectedBid.sellOnShare.value &&
-                bid.recipient == expectedBid.recipient,
+            bid.currency == expectedBid.currency &&
+            _validPurchaseToken[bid.currency] &&
+            bid.sellOnShare.value == expectedBid.sellOnShare.value &&
+            bid.recipient == expectedBid.recipient,
             "Market: Unexpected bid found."
         );
         require(
@@ -434,9 +434,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * @notice Given a token ID and a bidder, this method transfers the value of
-     * the bid to the shareholders. It also transfers the ownership of the media
-     * to the bid recipient. Finally, it removes the accepted bid and the current ask.
+    * @notice Given a token ID and a bidder, this method transfers the value of
+    * the bid to the shareholders. It also transfers the ownership of the media
+    * to the bid recipient. Finally, it removes the accepted bid and the current ask.
      */
     function _finalizeBidSale(uint256 tokenId, address bidder) private {
         Bid memory bid = _tokenBidders[tokenId][bidder];
@@ -455,11 +455,12 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-     * @notice sends payment tokens the payment splitter contract and initializes NFT transfer
-     */
+    * @notice sends payment tokens the payment splitter contract and initializes NFT transfer
+    */
 
     function _finalizeSale(uint256 tokenId, address buyer,  Bid memory bid, IERC20 purchaseToken) private {
-        require(amount >= 1000 wei);
+        require(bid.amount >= 1000 wei);
+
         BidShares storage bidShares = _bidShares[tokenId];
         address recipient = buyer;
 
@@ -474,58 +475,60 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
         IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
 
-       if(token !=  IERC20(ETH)){
-        purchaseToken.transfer(TheWellTreasury, amountForFees);
+        if(purchaseToken != IERC20(ETH)){
+            purchaseToken.transfer(_TheWellTreasury, amountForFees);
 
-        if(secondarySale[tokenId] == true) {
-            // Transfer bid share to owner of media
-            purchaseToken.safeTransfer(
-                IERC721(TheWellNFTContract).ownerOf(tokenId),
-                splitShare(bidShares.owner, newAmount)
-            );
-
-            // Transfer bid share to previous owner of media
-            if (_previousOwner[tokenId] != address(0)){
+            if(secondarySale[tokenId] == true) {
+                // Transfer bid share to owner of media
                 purchaseToken.safeTransfer(
-                    _previousOwner[tokenId],
-                    splitShare(bidShares.prevOwner, newAmount)
+                    IERC721(TheWellNFTContract).ownerOf(tokenId),
+                    splitShare(bidShares.owner, newAmount)
                 );
+
+                // Transfer bid share to previous owner of media
+                if (_previousOwner[tokenId] != address(0)){
+                    purchaseToken.safeTransfer(
+                        _previousOwner[tokenId],
+                        splitShare(bidShares.prevOwner, newAmount)
+                    );
+                }
+            } else {
+                // mark first sale as done by makiing secondarySale mapping true
+                setSecondarySale(tokenId);
+                bool setPaymentContractAllowance;
+
+
+                uint256 newAllowance = purchaseToken.allowance(address(this), address(paymentContract)) + creatorShare;
+                setPaymentContractAllowance = purchaseToken.approve(address(paymentContract), newAllowance);
+                require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
+
+                paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
             }
-        } else {
-            // mark first sale as done by makiing secondarySale mapping true
-            setSecondarySale(tokenId);
-        bool setPaymentContractAllowance;
-
-
-        uint256 newAllowance = purchaseToken.allowance(address(this), address(paymentContract)) + creatorShare;
-        setPaymentContractAllowance = purchaseToken.approve(address(paymentContract), newAllowance);
-        require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
-
-        paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
-        }
 
         } else{ 
-        //transfer fees
-        TheWellTreasury.transfer(amountForFees);
-        
-        if(secondarySale[tokenId] == true) {
-            // Transfer bid share to owner of media
-            IERC721(TheWellNFTContract).ownerOf(tokenId).transfer(
-                splitShare(bidShares.owner, newAmount)
-            );
+            //transfer fees
+            _TheWellTreasury.transfer(amountForFees);
 
-            // Transfer bid share to previous owner of media
-            if (_previousOwner[tokenId] != address(0)){
-                _previousOwner[tokenId].transfer(
-                    splitShare(bidShares.prevOwner, newAmount)
+            if(secondarySale[tokenId] == true) {
+                // Transfer bid share to owner of media
+                payable(IERC721(TheWellNFTContract).ownerOf(tokenId))
+                .transfer(
+                    splitShare(bidShares.owner, newAmount)
                 );
+
+                // Transfer bid share to previous owner of media
+                if (_previousOwner[tokenId] != address(0)){
+                    payable(_previousOwner[tokenId])
+                    .transfer(
+                        splitShare(bidShares.prevOwner, newAmount)
+                    );
+                }
+            } else {
+                // mark first sale as done by makiing secondarySale mapping true
+                setSecondarySale(tokenId);
+                //in case of first sale send all ether to payment splitter contract via the receive eth function 
+                paymentContract.receivePaymentETH{value: creatorShare}(tokenId);
             }
-        } else {
-            // mark first sale as done by makiing secondarySale mapping true
-            setSecondarySale(tokenId);
-         //in case of first sale send all ether to payment splitter contract via the receive eth function 
-        paymentContract.receivePayment{value: creatorShare}(tokenId);
-        }
 
         }
 

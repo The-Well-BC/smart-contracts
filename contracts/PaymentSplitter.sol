@@ -117,7 +117,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         }
     }
 
-    function receivePaymentETH(uint256 tokenId) external payable marketplaceContractOnly checkShares(tokenId) {
+    function receivePaymentETH(uint256 tokenId) external payable marketplaceContractOnly checkShares(tokenId) override {
         paymentForToken[tokenId] = msg.value;
 
         emit PaymentReceived(tokenId, _msgSender(), msg.value);

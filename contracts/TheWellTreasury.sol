@@ -4,7 +4,7 @@ import "./Admin.sol";
 
 contract TheWellTreasury is WellAdmin {
     uint256 public totalEthRecived;
-    address MintFund;
+    address payable MintFund;
     address ETH;
 
     event TokenDeposited( uint256 indexed amount, IERC20 token, address indexed depositor);
@@ -14,7 +14,7 @@ contract TheWellTreasury is WellAdmin {
     constructor() {
         ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     }
-    receive() external {
+    receive() external payable {
         totalEthRecived++;
         emit ReceivedEther(msg.value, msg.sender);
     }
@@ -27,13 +27,13 @@ contract TheWellTreasury is WellAdmin {
     function withdrawTokenOrEth(uint256 amount, IERC20 token) public wellAdmin {
         require(amount >= 1000 wei, "invalid amount to be sent");
 
-        if (token == ETH) {
+        if(address(token) == ETH) {
             //donate to mintfund
             uint256 mintFundDonation = (amount * 25) / 1000;
             MintFund.transfer(mintFundDonation);
 
             // withdraw the rest to caller
-            msg.sender.transfer(amount - mintFundDonation);
+            payable(msg.sender).transfer(amount - mintFundDonation);
             emit Withdrawal(amount, token);
         } else {
             //donate to mintfund

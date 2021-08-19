@@ -88,7 +88,7 @@ interface IMarket {
         uint256 tokenId,
         Bid calldata bid,
         address spender
-    ) external;
+    ) external payable;
 
     function removeBid(uint256 tokenId, address bidder) external;
 
