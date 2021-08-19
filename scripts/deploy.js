@@ -44,7 +44,7 @@ module.exports = async function start(fundsCollectorAddress, registryAddress, do
     await well.grantMinterRole(crowdsale.address);
     await fresh.grantMinterRole(crowdsale.address);
 
-    const { nft, marketplace } = await nftDeploy(fresh, baseURI);
+    const { nft, marketplace } = await nftDeploy(baseURI);
 
     // Payment Splitter contract
     const PaymentSplitter = await hh.ethers.getContractFactory('TheWellPaymentSplitter');
