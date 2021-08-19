@@ -509,7 +509,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         } else{ 
 
             //transfer fees
-            TheWellTreasury.transfer(amountForFees);
+            _TheWellTreasury.transfer(amountForFees);
 
             if(secondarySale[tokenId] == true) {
                 // Transfer bid share to owner of media
