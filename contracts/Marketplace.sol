@@ -476,7 +476,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
         IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
 
-        if(purchaseToken != IERC20(ETH)) {
+        if(address(purchaseToken) != ETH) {
             purchaseToken.transfer(_TheWellTreasury, amountForFees);
 
             if(secondarySale[tokenId] == true) {
@@ -507,7 +507,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
 
         } else{ 
-            //
+
             //transfer fees
             TheWellTreasury.transfer(amountForFees);
 
