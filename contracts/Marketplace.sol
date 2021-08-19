@@ -507,47 +507,48 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
 
         } else{ 
-        //
-        //transfer fees
-        TheWellTreasury.transfer(amountForFees);
-        
-        if(secondarySale[tokenId] == true) {
-            // Transfer bid share to owner of media
-            payable(IERC721(TheWellNFTContract).ownerOf(tokenId)).transfer(
-                splitShare(bidShares.owner, newAmount)
-            );
+            //
+            //transfer fees
+            TheWellTreasury.transfer(amountForFees);
 
-            // Transfer bid share to previous owner of media
-            if (_previousOwner[tokenId] != address(0)){
-                payable(_previousOwner[tokenId]).transfer(
-                    splitShare(bidShares.prevOwner, newAmount)
+            if(secondarySale[tokenId] == true) {
+                // Transfer bid share to owner of media
+                payable(IERC721(TheWellNFTContract).ownerOf(tokenId)).transfer(
+                    splitShare(bidShares.owner, newAmount)
                 );
 
                 // Transfer bid share to previous owner of media
                 if (_previousOwner[tokenId] != address(0)){
-                    payable(_previousOwner[tokenId])
-                    .transfer(
+                    payable(_previousOwner[tokenId]).transfer(
                         splitShare(bidShares.prevOwner, newAmount)
                     );
+
+                    // Transfer bid share to previous owner of media
+                    if (_previousOwner[tokenId] != address(0)){
+                        payable(_previousOwner[tokenId])
+                        .transfer(
+                            splitShare(bidShares.prevOwner, newAmount)
+                        );
+                    }
+                } else {
+                    // mark first sale as done by makiing secondarySale mapping true
+                    setSecondarySale(tokenId);
+                    // in case of first sale send all ether to payment splitter contract via the receive eth function 
+                    paymentContract.receivePaymentETH{value: creatorShare}(tokenId);
                 }
-            } else {
-                // mark first sale as done by makiing secondarySale mapping true
-                setSecondarySale(tokenId);
-                // in case of first sale send all ether to payment splitter contract via the receive eth function 
-                paymentContract.receivePaymentETH{value: creatorShare}(tokenId);
+
             }
 
+            //set previous owner, turn current nft owner to previous owner then transfer out
+            _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
+
+            // Transfer media to bid recipient
+            TheWellNFT(TheWellNFTContract).nftPurchaseTransfer(
+                tokenId,
+                recipient
+            );
+
+            emit TokenPurchasedERC20(tokenId, bid.amount, address(purchaseToken));
         }
-
-        //set previous owner, turn current nft owner to previous owner then transfer out
-        _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
-
-        // Transfer media to bid recipient
-        TheWellNFT(TheWellNFTContract).nftPurchaseTransfer(
-            tokenId,
-            recipient
-        );
-
-        emit TokenPurchasedERC20(tokenId, bid.amount, address(purchaseToken));
     }
 }
