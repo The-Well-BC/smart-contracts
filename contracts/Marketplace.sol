@@ -476,7 +476,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
         IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
 
-        if(purchaseToken != IERC20(ETH)){
+        if(purchaseToken != IERC20(ETH)) {
             purchaseToken.transfer(_TheWellTreasury, amountForFees);
 
             if(secondarySale[tokenId] == true) {
@@ -503,18 +503,21 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
                 setPaymentContractAllowance = purchaseToken.approve(address(paymentContract), newAllowance);
                 require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
 
-                paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
-            }
-
         } else{ 
-            // Transfer fees
-            _TheWellTreasury.transfer(amountForFees);
+        //
+        //transfer fees
+        TheWellTreasury.transfer(amountForFees);
+        
+        if(secondarySale[tokenId] == true) {
+            // Transfer bid share to owner of media
+            payable(IERC721(TheWellNFTContract).ownerOf(tokenId)).transfer(
+                splitShare(bidShares.owner, newAmount)
+            );
 
-            if(secondarySale[tokenId] == true) {
-                // Transfer bid share to owner of media
-                payable(IERC721(TheWellNFTContract).ownerOf(tokenId))
-                .transfer(
-                    splitShare(bidShares.owner, newAmount)
+            // Transfer bid share to previous owner of media
+            if (_previousOwner[tokenId] != address(0)){
+                payable(_previousOwner[tokenId]).transfer(
+                    splitShare(bidShares.prevOwner, newAmount)
                 );
 
                 // Transfer bid share to previous owner of media
