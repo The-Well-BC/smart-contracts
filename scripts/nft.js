@@ -1,14 +1,17 @@
 const hh = require('hardhat');
 
-module.exports = async function main(auctionToken, baseURI = '') {
+module.exports = async function main(baseURI = '') {
+    // Deploy NFT, marketplace, and treasury contracts
     const signers = await hh.ethers.getSigners();
-    const TheWellNFT = await hh.ethers.getContractFactory('TheWellNFT');
+    const NFT = await hh.ethers.getContractFactory('TheWellNFT');
     const Marketplace = await hh.ethers.getContractFactory('TheWellMarketplace');
+    const Treasury = await hh.ethers.getContractFactory('TheWellTreasury');
 
-    // NFT contract
-    const nft = await TheWellNFT.deploy('The Well NFT', 'WELLNFT', baseURI);
+    const nft = await NFT.deploy('The Well NFT', 'WELLNFT', baseURI);
+    // Treasury contract
+    const treasury = await Treasury.deploy();
     // Marketplace contract
-    const marketplace = await Marketplace.deploy(signers[0].address);
+    const marketplace = await Marketplace.deploy(signers[0].address, treasury.address);
 
     await nft.deployed();
     await marketplace.deployed();
