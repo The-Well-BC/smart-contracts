@@ -71,8 +71,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
 
     /* *********
-    * Modifiers
-    * *********
+     * Modifiers
+     * *********
      */
 
     constructor(address _WETH, address OWNER, address payable TheWellTreasury_) {
@@ -88,8 +88,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice require that the msg.sender is the configured media contract
-    */
+     * @notice require that the msg.sender is the configured media contract
+     */
+
     modifier onlyMediaCaller() {
         require(
             TheWellNFTContract == msg.sender,
@@ -131,31 +132,31 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     function currentAskForToken(uint256 tokenId)
-    external
-    view
-    override
-    returns (Ask memory)
+        external
+        view
+        override
+        returns (Ask memory)
     {
         return _tokenAsks[tokenId];
     }
 
     function bidSharesForToken(uint256 tokenId)
-    public
-    view
-    override
-    returns (BidShares memory)
+        public
+        view
+        override
+        returns (BidShares memory)
     {
         return _bidShares[tokenId];
     }
 
     /**
-    * @notice Sets bid shares for a particular tokenId. These bid shares must
-    * sum to 100
-    */
+     * @notice Sets bid shares for a particular tokenId. These bid shares must
+     * sum to 100
+     */
     function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata __owner, Decimal.D256 calldata _creator)
-    public
-    override
-    onlyMediaCaller
+        public
+        override
+        onlyMediaCaller
     {
         BidShares memory bidShares;
         bidShares.prevOwner = _prevOwner;
@@ -171,16 +172,16 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice Validates that the bid is valid by ensuring that the bid amount can be split perfectly into all the bid shares.
-    *  We do this by comparing the sum of the individual share values with the amount and ensuring they are equal. Because
-    *  the splitShare function uses integer division, any inconsistencies with the original and split sums would be due to
-    *  a bid splitting that does not perfectly divide the bid amount.
-        */
+     * @notice Validates that the bid is valid by ensuring that the bid amount can be split perfectly into all the bid shares.
+     *  We do this by comparing the sum of the individual share values with the amount and ensuring they are equal. Because
+     *  the splitShare function uses integer division, any inconsistencies with the original and split sums would be due to
+     *  a bid splitting that does not perfectly divide the bid amount.
+     */
     function isValidBid(uint256 tokenId, uint256 bidAmount)
-    public
-    view
-    override
-    returns (bool)
+        public
+        view
+        override
+        returns (bool)
     {
         BidShares memory bidShares = bidSharesForToken(tokenId);
         require(
@@ -197,22 +198,22 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     function bidForTokenBidder(uint256 tokenId, address bidder)
-    external
-    view
-    override
-    returns (Bid memory)
+        external
+        view
+        override
+        returns (Bid memory)
     {
         return _tokenBidders[tokenId][bidder];
     }
 
     /**
-    * @notice Validates that the provided bid shares sum to 100
-    */
+     * @notice Validates that the provided bid shares sum to 100
+     */
     function isValidBidShares(BidShares memory bidShares)
-    public
-    pure
-    override
-    returns (bool)
+        public
+        pure
+        override
+        returns (bool)
     {
         return
         bidShares.creator.value.add(bidShares.owner.value).add(
@@ -221,21 +222,21 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice return a % of the specified amount. This function is used to split a bid into shares
-    * for a media's shareholders.
-        */
+     * @notice return a % of the specified amount. This function is used to split a bid into shares
+     * for a media's shareholders.
+     */
     function splitShare(Decimal.D256 memory sharePercentage, uint256 amount)
-    public
-    pure
-    override
-    returns (uint256)
+        public
+        pure
+        override
+        returns (uint256)
     {
         return Decimal.mul(amount, sharePercentage).div(100);
     }
 
     /**
-    * @notice removes an ask for a token and emits an AskRemoved event
-    */
+     * @notice removes an ask for a token and emits an AskRemoved event
+     */
     function _removeAsk(uint256 tokenId) private nonReentrant {
         require(tokenAskSet[tokenId] == true, 'Market: token ask not set');
         emit AskRemoved(tokenId, _tokenAsks[tokenId]);
@@ -246,14 +247,14 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     function removeAsk(uint256 tokenId) external override
-    ownerOrTheWell(tokenId) nonReentrant
+        ownerOrTheWell(tokenId) nonReentrant
     {
         return _removeAsk(tokenId);
     }
 
     function removeBid(uint256 tokenId, address bidder)
-    public
-    override
+        public
+        override
     {
         require(bidder == msg.sender, 'bidder must be msgsender');
         Bid storage bid = _tokenBidders[tokenId][bidder];
@@ -271,9 +272,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice Sets the ask on a particular media. If the ask cannot be evenly split into the media's
-    * bid shares, this reverts.
-    */
+     * @notice Sets the ask on a particular media. If the ask cannot be evenly split into the media's
+     * bid shares, this reverts.
+     */
     function setAsk(
         uint256 tokenId,
         uint256 amount,
@@ -300,8 +301,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * Getter fn for address of previous owner of token
-    */
+     * Getter fn for address of previous owner of token
+     */
 
     function previousOwner(uint tokenID) public view returns (address) {
         require( _previousOwner[tokenID] != address(0), "ERC721: previous owner query gives invalid address");
@@ -309,8 +310,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * Bid on token
-    */
+     * Bid on token
+     */
     function createBid(
         uint256 tokenId,
         Bid memory bid,
@@ -395,18 +396,18 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice Accepts a bid from a particular bidder. Can only be called by the media contract.
-    * See {_finalizeBidSale}
-    * Provided bid must match a bid in storage. This is to prevent a race condition
-    * where a bid may change while the acceptBid call is in transit.
-    * A bid cannot be accepted if it cannot be split equally into its shareholders.
-    * This should only revert in rare instances (example, a low bid with a zero-decimal token),
-    * but is necessary to ensure fairness to all shareholders.
+     * @notice Accepts a bid from a particular bidder. Can only be called by the media contract.
+     * See {_finalizeBidSale}
+     * Provided bid must match a bid in storage. This is to prevent a race condition
+     * where a bid may change while the acceptBid call is in transit.
+     * A bid cannot be accepted if it cannot be split equally into its shareholders.
+     * This should only revert in rare instances (example, a low bid with a zero-decimal token),
+     * but is necessary to ensure fairness to all shareholders.
      */
     function acceptBid(uint256 tokenId, Bid calldata expectedBid)
-    public
-    override
-    nonReentrant
+        public
+        override
+        nonReentrant
     {
         require( IERC721(TheWellNFTContract).ownerOf(tokenId) == msg.sender, 'Market: cannot accept bid, not token owner');
         Bid memory bid = _tokenBidders[tokenId][expectedBid.bidder];
@@ -434,9 +435,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice Given a token ID and a bidder, this method transfers the value of
-    * the bid to the shareholders. It also transfers the ownership of the media
-    * to the bid recipient. Finally, it removes the accepted bid and the current ask.
+     * @notice Given a token ID and a bidder, this method transfers the value of
+     * the bid to the shareholders. It also transfers the ownership of the media
+     * to the bid recipient. Finally, it removes the accepted bid and the current ask.
      */
     function _finalizeBidSale(uint256 tokenId, address bidder) private {
         Bid memory bid = _tokenBidders[tokenId][bidder];
@@ -455,8 +456,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     /**
-    * @notice sends payment tokens the payment splitter contract and initializes NFT transfer
-    */
+     * @notice sends payment tokens the payment splitter contract and initializes NFT transfer
+     */
 
     function _finalizeSale(uint256 tokenId, address buyer,  Bid memory bid, IERC20 purchaseToken) private {
         require(bid.amount >= 1000 wei);
@@ -506,7 +507,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             }
 
         } else{ 
-            //transfer fees
+            // Transfer fees
             _TheWellTreasury.transfer(amountForFees);
 
             if(secondarySale[tokenId] == true) {
@@ -526,7 +527,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             } else {
                 // mark first sale as done by makiing secondarySale mapping true
                 setSecondarySale(tokenId);
-                //in case of first sale send all ether to payment splitter contract via the receive eth function 
+                // in case of first sale send all ether to payment splitter contract via the receive eth function 
                 paymentContract.receivePaymentETH{value: creatorShare}(tokenId);
             }
 
