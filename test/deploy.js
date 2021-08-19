@@ -26,6 +26,8 @@ module.exports = async function() {
     const WETH9 = await ethers.getContractFactory('WETH9');
     const weth = await WETH9.deploy();
 
+    marketplace.addPurchaseToken(weth.address);
+
     // Set registrar as owner of registry
     await registry.connect(accounts[0]).setOwner(domainNode, registrar.address);
 

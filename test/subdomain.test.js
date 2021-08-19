@@ -73,10 +73,8 @@ describe('Test subdomain registration', function() {
                 return well.mint(signer.address, (balance).toString());
             }).then(() => well.connect(signer).approve(Registrar.address, (10 ** decimals).toString()))
             .then(() => Registrar.connect(signer).register(subdomain, signer.address))
-            .then(async res => {
-                registerTx = await res.wait();
-                console.log('REGIS TER TX:', registerTx.events);
-            })
+            .then(res => res.wait())
+            .then(res => registerTx = res)
         })
 
         it('Check that subdomain is created', async function() {

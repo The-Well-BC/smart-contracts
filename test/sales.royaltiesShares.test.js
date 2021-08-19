@@ -10,10 +10,11 @@ const { waffle, ethers } = require("hardhat");
 const provider = waffle.provider;
 
 const deploy = require('./deploy');
-let theWellNFT, marketplace, weth;
+let theWellNFT, marketplace, goodToken;
 
 let oneEth = '2000000000000000000';
 let tokenID, tokenPrice = '30000000';
+const { listNFT, Bid } = require('./helpers');
 
 describe('Test: Royalties from NFT sales', function() {
     let accounts,
@@ -23,55 +24,21 @@ describe('Test: Royalties from NFT sales', function() {
         artistPercentage = 65,
         collaboratorPercentages = [20, 10, 5];
 
-    // Deploy contracts and mint NFT in before()
     before(async function() {
-        let deployed = await deploy();
-        accounts = deployed.accounts;
+        return listNFT()
+            .then(res => {
+                ({nft, TheWellMarketplace:marketplace, TheWellNFT:theWellNFT, goodToken, badToken} = res);
 
-        weth = deployed.weth;
-        marketplace = deployed.marketplace;
-        theWellNFT = deployed.nft;
-        payments = deployed.paymentSplitter;
+                ({ artist, collaborators } = nft);
+            });
     });
 
     describe('Creator/Collaborator Royalties', function() {
-        before(async function() {
-            // Array of artists. Each test should use a different artist so we have a clean slate
-            artist = accounts[5];
-            collaborators = [ accounts[2], accounts[3], accounts[4]];
-
-            let buyer = accounts[1];
-
-            return theWellNFT.connect(artist).mint(
-                artistPercentage,
-                collaborators.map(c => c.address),
-                collaboratorPercentages,
-                'Qmblah123.json',
-                15, 35, creatorsRoyalties
-            )
-                .then(res => res.wait())
-                .then(res => {
-                    tokenID = res.events.filter(log => log.event == 'Transfer')[0]
-                        .args.tokenId.toString();
-
-                    return Promise.all([
-                        marketplace.connect(artist).setPrice(tokenID, tokenPrice),
-                        weth.connect(buyer).deposit({ value: oneEth }),
-                        weth.connect(buyer).approve(marketplace.address, tokenPrice),
-
-                        weth.balanceOf(buyer.address)
-                    ]);
-                }).then(res => res.map(r => (r.wait) ? r.wait() : r))
-                .then(async (res) => {
-                    return marketplace.connect(buyer).buyToken(tokenID, tokenPrice, weth.address)
-                        .then(res => res.wait())
-                });
-        });
 
         it(`Payment splitter should now have  ${ethers.utils.formatEther(((creatorsRoyalties/100) * tokenPrice).toString())} $FRESH tokens`, function() {
             console.log('CREATOR ROYALTIES IN PERCENTAGE:', creatorsRoyalties/100);
             console.log(' TOKEN PRICE:', tokenPrice);
-            return weth.balanceOf(payments.address)
+            return goodToken.balanceOf(payments.address)
             .then(res => {
                 expect(parseInt(res.toString())).to.equal(
                     tokenPrice * (creatorsRoyalties/100)
@@ -82,11 +49,11 @@ describe('Test: Royalties from NFT sales', function() {
         it('Withdraw artist shares', function() {
             const artistShares = tokenPrice * (creatorsRoyalties/100) * (artistPercentage/100);
 
-            // return payments.connect(artist).release(tokenID, artist.address, weth)
-            return payments['release(uint256,address,address)'](tokenID, artist.address, weth.address)
+            // return payments.connect(artist).release(tokenID, artist.address, goodToken)
+            return payments['release(uint256,address,address)'](tokenID, artist.address, goodToken.address)
                 .then(res => res.wait())
                 .then(res => {
-                    return weth.balanceOf(artist.address);
+                    return goodToken.balanceOf(artist.address);
                 }).then(res => {
                     expect(parseInt(res.toString())).to.equal(artistShares);
                 });
@@ -98,13 +65,13 @@ describe('Test: Royalties from NFT sales', function() {
 
             return Promise.all(
                 collaborators.map(co => 
-                    payments['release(uint256,address,address)'](tokenID, co.address, weth.address)
+                    payments['release(uint256,address,address)'](tokenID, co.address, goodToken.address)
                 )
             )
                 .then(resArr => Promise.all(resArr.map(res => res.wait())))
                 .then(() => {
                     return Promise.all(
-                        collaborators.map(c => weth.balanceOf(c.address))
+                        collaborators.map(c => goodToken.balanceOf(c.address))
                     );
                 })
                 .then(res => {
@@ -112,5 +79,9 @@ describe('Test: Royalties from NFT sales', function() {
                     expect(res.map(i => parseInt(i.toString()))).to.eql(collaboratorShares);
                 });
         });
+
+        it('Fail on non-collaborator withdraw');
+
+        it('Creators/Collaborators withdrawals should be limited to sales from their NFTs');
     });
 });
