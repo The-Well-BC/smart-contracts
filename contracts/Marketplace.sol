@@ -469,9 +469,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint amountForFees = bid.amount * 125/1000;
         uint newAmount = bid.amount - amountForFees;
 
-        address[] memory addressOfCreators =
-            TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
-
         uint256 creatorShare = splitShare(bidShares.creator, newAmount);
 
         IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
