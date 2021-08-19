@@ -502,6 +502,9 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
                 uint256 newAllowance = purchaseToken.allowance(address(this), address(paymentContract)) + creatorShare;
                 setPaymentContractAllowance = purchaseToken.approve(address(paymentContract), newAllowance);
                 require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
+            }
+
+            paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
 
         } else{ 
         //
