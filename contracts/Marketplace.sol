@@ -12,6 +12,8 @@ import {IMarket} from "./IMarket.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./IPayments.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import './Admin.sol';
 
 contract TheWellMarketplace is IMarket, ReentrancyGuard{
     using SafeMath for uint256;
@@ -21,11 +23,24 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * Globals
      * *******
      */
+
+     //eth bal after last eth paid as bid  
+     uint balanceAfterLastEthTransfer;
+
     // Address of the media contract that can call this market
     address payable public TheWellNFTContract;
 
+    //address of the well trasury contract
+    address payable public _TheWellTreasury;
+
     // Mapping from token ID to previous owner address
     mapping (uint256 => address) private _previousOwner;
+
+   //address denoting ETH;
+    address ETH;
+
+    // WETH contract address
+    address public WETH;
 
     // Allowed purchase tokens
     mapping(address => bool) public _validPurchaseToken;
@@ -60,6 +75,13 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * *********
      */
 
+         constructor(address _WETH, address OWNER, address _TheWellTreasury) {
+        WETH = _WETH;
+        _owner = OWNER;
+        TheWellTreasury = _TheWellTreasury;
+        ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    }
+
      modifier ownerOrTheWell(uint tokenId){
          require( TheWellNFTContract == msg.sender || msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner or token contract');
          _;
@@ -74,10 +96,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             "Market: Only media contract"
         );
         _;
-    }
-
-    constructor(address OWNER) {
-        _owner = OWNER;
     }
 
     function addPurchaseToken(address purchaseToken_) public {
@@ -297,7 +315,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint256 tokenId,
         Bid memory bid,
         address spender
-    ) public override {
+    ) public payable override nonReentrant {
         BidShares memory bidShares = _bidShares[tokenId];
         require(
             bidShares.creator.value.add(bid.sellOnShare.value) <=
@@ -309,6 +327,10 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         require(
             bid.currency != address(0),
             "Market: bid currency cannot be 0 address"
+        );
+        require(
+            ERC20(bid.currency).decimals() === 18,
+            "'Market: invalid bid currency, decimals not 18"
         );
         require(
             _validPurchaseToken[bid.currency],
@@ -331,6 +353,19 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         // We must check the balance that was actually transferred to the market,
         // as some tokens impose a transfer fee and would not actually transfer the
         // full amount to the market, resulting in locked funds for refunds & bid acceptance
+        if( token == IERC20(ETH)) {
+        require( bid.amount == msg.value, 'bid amount not equal to ether sent'); 
+        
+
+        _tokenBidders[tokenId][bid.bidder] = Bid(
+            bid.amount,
+            bid.currency,
+            bid.bidder,
+            bid.recipient,
+            bid.sellOnShare
+        );
+        } else {
+
         uint256 beforeTransferBalance = token.balanceOf(address(this));
         token.safeTransferFrom(spender, address(this), bid.amount);
         uint256 afterTransferBalance = token.balanceOf(address(this));
@@ -341,6 +376,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             bid.recipient,
             bid.sellOnShare
         );
+        }
         emit BidCreated(tokenId, bid);
 
         // If a bid meets the criteria for an ask, automatically accept the bid.
@@ -356,22 +392,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             // Finalize exchange
             _finalizeBidSale(tokenId, bid.bidder);
         }
-    }
-
-    /* @notice Can only be called by the artist. allows the artist to change art prices */
-    function setPrice(uint256 tokenID_, uint256 amount_, address erc20Token) public nonReentrant {
-        return setAsk(tokenID_, amount_, erc20Token);
-    }
-
-    /**
-     * Purchase a token
-     * Function will accept ether and an erc20 token
-     */
-    function buyToken(uint256 tokenId_, uint256 amount, IERC20 purchaseToken) external {
-        require(amount == _tokenAsks[tokenId_].amount, 'Marketplace: Wrong price');
-        return createBid(tokenId_,
-                             Bid(amount, address(purchaseToken), msg.sender, msg.sender, Decimal.D256(25)),
-                             msg.sender);
     }
 
     /**
@@ -425,7 +445,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         require(_validPurchaseToken[bid.currency], "MARKET: Invalid bid currency");
         IERC20 token = IERC20(bid.currency);
 
-        _finalizeSale(tokenId, bidder, bid.amount, token);
+        _finalizeSale(tokenId, bidder, bid, token);
 
         // Remove the accepted bid
         delete _tokenBidders[tokenId][bidder];
@@ -438,32 +458,42 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      * @notice sends payment tokens the payment splitter contract and initializes NFT transfer
      */
 
-    function _finalizeSale(uint256 tokenId, address buyer, uint256 amount, IERC20 purchaseToken) private {
+    function _finalizeSale(uint256 tokenId, address buyer,  Bid memory bid, IERC20 purchaseToken) private {
+        require(amount >= 1000 wei);
         BidShares storage bidShares = _bidShares[tokenId];
         address recipient = buyer;
 
-        uint256 creatorShare = splitShare(bidShares.creator, amount);
+        //take %12.5 of amount as fees
+        uint amountForFees = bid.amount * 125/1000;
+        uint newAmount = bid.amount - amountForFees;
+
+        address[] memory addressOfCreators =
+            TheWellNFT(TheWellNFTContract).tokenCreators(tokenId);
+
+        uint256 creatorShare = splitShare(bidShares.creator, newAmount);
 
         IPayments paymentContract = TheWellNFT(TheWellNFTContract).getPaymentsContract();
+
+       if(token !=  IERC20(ETH)){
+        purchaseToken.transfer(TheWellTreasury, amountForFees);
+
         if(secondarySale[tokenId] == true) {
             // Transfer bid share to owner of media
             purchaseToken.safeTransfer(
                 IERC721(TheWellNFTContract).ownerOf(tokenId),
-                splitShare(bidShares.owner, amount)
+                splitShare(bidShares.owner, newAmount)
             );
 
             // Transfer bid share to previous owner of media
             if (_previousOwner[tokenId] != address(0)){
                 purchaseToken.safeTransfer(
                     _previousOwner[tokenId],
-                    splitShare(bidShares.prevOwner, amount)
+                    splitShare(bidShares.prevOwner, newAmount)
                 );
             }
         } else {
             // mark first sale as done by makiing secondarySale mapping true
             setSecondarySale(tokenId);
-        }
-
         bool setPaymentContractAllowance;
 
 
@@ -472,6 +502,32 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         require(setPaymentContractAllowance == true, 'Failed to approve allowance increase. Try again with a different ERC20');
 
         paymentContract.receiveERC20Payment(tokenId, address(this), creatorShare, purchaseToken);
+        }
+
+        } else{ 
+        //transfer fees
+        TheWellTreasury.transfer(amountForFees);
+        
+        if(secondarySale[tokenId] == true) {
+            // Transfer bid share to owner of media
+            IERC721(TheWellNFTContract).ownerOf(tokenId).transfer(
+                splitShare(bidShares.owner, newAmount)
+            );
+
+            // Transfer bid share to previous owner of media
+            if (_previousOwner[tokenId] != address(0)){
+                _previousOwner[tokenId].transfer(
+                    splitShare(bidShares.prevOwner, newAmount)
+                );
+            }
+        } else {
+            // mark first sale as done by makiing secondarySale mapping true
+            setSecondarySale(tokenId);
+         //in case of first sale send all ether to payment splitter contract via the receive eth function 
+        paymentContract.receivePayment{value: creatorShare}(tokenId);
+        }
+
+        }
 
         //set previous owner, turn current nft owner to previous owner then transfer out
         _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
@@ -482,6 +538,6 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             recipient
         );
 
-        emit TokenPurchasedERC20(tokenId, amount, address(purchaseToken));
+        emit TokenPurchasedERC20(tokenId, bid.amount, address(purchaseToken));
     }
 }

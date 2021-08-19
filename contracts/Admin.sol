@@ -7,8 +7,10 @@ contract WellAdmin {
     mapping(address => bool) private _superAdminMappings;
 
     constructor() {
-        _numAdmins = 0; _addAdmin(msg.sender, 'admin');
-        _numSuperAdmins = 0; _addAdmin(msg.sender, 'superAdmin');
+        _numAdmins = 0;
+         _addAdmin(msg.sender, 'admin');
+        _numSuperAdmins = 0;
+        _addAdmin(msg.sender, 'superAdmin');
     }
 
     modifier wellAdmin() {

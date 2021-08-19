@@ -56,6 +56,8 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     mapping (uint => mapping(address => bool))paymentReleased;
 
     address nftContractAddress;
+    
+    address marketplaceContract;
 
     /**
      * @dev Checks that shares have been set.
@@ -73,6 +75,10 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         _;
     }
 
+    modifier  marketplaceContractOnly() {
+        require(msg.sender ==  marketplaceContract);
+        _;
+    }
     function maxTenShares(address[] memory arr) private returns(bool){
         return arr.length <= 10;
     }
@@ -111,8 +117,8 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         }
     }
 
-    function receivePayment(uint256 tokenId) internal checkShares(tokenId) {
-        paymentForToken[tokenId] += msg.value;
+    function receivePaymentETH(uint256 tokenId) external payable marketplaceContractOnly checkShares(tokenId) {
+        paymentForToken[tokenId] = msg.value;
 
         emit PaymentReceived(tokenId, _msgSender(), msg.value);
     }
@@ -120,13 +126,13 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     /**
       * @dev receives payment in the form of ERC20 tokens
       */
-    function receiveERC20Payment(uint256 tokenID, address buyer, uint256 paymentAmount, IERC20 paymentToken) external override returns(bool) {
+    function receiveERC20Payment(uint256 tokenID, address buyer, uint256 paymentAmount, IERC20 paymentToken) external override marketplaceContractOnly returns(bool) {
         // Check that payees for that token exist
         require(_payees[tokenID].length > 0);
 
         IERC20(paymentToken).safeTransferFrom(buyer, address(this), paymentAmount);
 
-        erc20PaymentsReceived[paymentToken][tokenID] += paymentAmount;
+        erc20PaymentsReceived[paymentToken][tokenID] = paymentAmount;
 
         emit PaymentReceivedERC20(tokenID, buyer, paymentAmount, address(paymentToken));
         return true;
@@ -222,7 +228,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
      * @dev Triggers a transfer to `account` of the amount of Ether they are owed, according to their percentage of the
      * total shares and their previous withdrawals.
      */
-    function release(uint256 tokenId, address payable account)
+    function releaseETH(uint256 tokenId, address payable account)
         external virtual
         checkShares(tokenId)
         nonReentrant
@@ -248,7 +254,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         emit PaymentReleased(tokenId, account, payment);
     }
 
-    function release(uint256 tokenId, address payable account, IERC20 paymentToken)
+    function releaseToken(uint256 tokenId, address payable account, IERC20 paymentToken)
         external virtual
         checkShares(tokenId)
         nonReentrant
@@ -264,7 +270,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         ) /
             _totalShares[tokenId];
 
-        require(payment != 0, "PaymentSplitter: account not due payment");
+        require(payment != 0, "PaymentSplitter: account not due payment with this token");
 
         _released[tokenId][account] = _released[tokenId][account] + payment;
         _totalReleased[tokenId] = _totalReleased[tokenId] + payment;
