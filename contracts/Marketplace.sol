@@ -505,18 +505,19 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         }
 
         } else{ 
+        //
         //transfer fees
         TheWellTreasury.transfer(amountForFees);
         
         if(secondarySale[tokenId] == true) {
             // Transfer bid share to owner of media
-            IERC721(TheWellNFTContract).ownerOf(tokenId).transfer(
+            payable(IERC721(TheWellNFTContract).ownerOf(tokenId)).transfer(
                 splitShare(bidShares.owner, newAmount)
             );
 
             // Transfer bid share to previous owner of media
             if (_previousOwner[tokenId] != address(0)){
-                _previousOwner[tokenId].transfer(
+                payable(_previousOwner[tokenId]).transfer(
                     splitShare(bidShares.prevOwner, newAmount)
                 );
             }
