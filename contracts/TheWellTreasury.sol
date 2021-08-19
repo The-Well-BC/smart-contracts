@@ -7,21 +7,21 @@ contract TheWellTreasury is WellAdmin {
     address MintFund;
     address ETH;
 
-    event tokenDeposited( uint256 indexed amount, IERC20 token, address indexed depositor);
-    event withdrawal(uint256 indexed amount, IERC20 indexed token);
-    event receivedEther(uint256 amount, address sender);
+    event TokenDeposited( uint256 indexed amount, IERC20 token, address indexed depositor);
+    event Withdrawal(uint256 indexed amount, IERC20 indexed token);
+    event ReceivedEther(uint256 amount, address sender);
 
     constructor() {
         ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     }
     receive() external {
         totalEthRecived++;
-        emit receivedEther(msg.value, msg.sender);
+        emit ReceivedEther(msg.value, msg.sender);
     }
 
     function depositTokens(uint256 amount, IERC20 token) public {
         token.transferFrom(msg.sender, address(this), amount);
-        emit tokenDeposited(amount, token, msg.sender);
+        emit TokenDeposited(amount, token, msg.sender);
     }
 
     function withdrawTokenOrEth(uint256 amount, IERC20 token) public wellAdmin {
@@ -34,7 +34,7 @@ contract TheWellTreasury is WellAdmin {
 
             // withdraw the rest to caller
             msg.sender.transfer(amount - mintFundDonation);
-            emit withdrawal(amount, token);
+            emit Withdrawal(amount, token);
         } else {
             //donate to mintfund
             uint256 mintFundDonation = (amount * 25) / 1000;
@@ -42,7 +42,7 @@ contract TheWellTreasury is WellAdmin {
 
             // withdraw the rest to caller
             token.transfer(msg.sender, amount - mintFundDonation);
-            emit withdrawal(amount, token);
+            emit Withdrawal(amount, token);
         }
     }
 }
