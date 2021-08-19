@@ -523,9 +523,8 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         } else {
             // mark first sale as done by makiing secondarySale mapping true
             setSecondarySale(tokenId);
-         //in case of first sale send all ether to payment splitter contract
-        address(paymentContract).transfer(creatorShare);
-        paymentContract.receivePayment(tokenId);
+         //in case of first sale send all ether to payment splitter contract via the receive eth function 
+        paymentContract.receivePayment{value: creatorShare}(tokenId);
         }
 
         }

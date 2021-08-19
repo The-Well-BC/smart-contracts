@@ -32,6 +32,8 @@ interface IPayments {
      */
     function setShares( uint256 tokenId_, address[] memory payees_, uint256[] memory shares_) external;
 
+    function receivePaymentETH(uint256 tokenId) external payable;
+
     function receiveERC20Payment(uint256 tokenID, address buyer, uint256 paymentAmount, IERC20 paymentToken) external returns(bool);
 
     /**

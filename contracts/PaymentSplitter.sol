@@ -56,6 +56,8 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     mapping (uint => mapping(address => bool))paymentReleased;
 
     address nftContractAddress;
+    
+    address marketplaceContract;
 
     /**
      * @dev Checks that shares have been set.
@@ -73,6 +75,10 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         _;
     }
 
+    modifier  marketplaceContractOnly() {
+        require(msg.sender ==  marketplaceContract);
+        _;
+    }
     function maxTenShares(address[] memory arr) private returns(bool){
         return arr.length <= 10;
     }
@@ -111,7 +117,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         }
     }
 
-    function receivePayment(uint256 tokenId) internal checkShares(tokenId) {
+    function receivePaymentETH(uint256 tokenId) external payable marketplaceContractOnly checkShares(tokenId) {
         paymentForToken[tokenId] = msg.value;
 
         emit PaymentReceived(tokenId, _msgSender(), msg.value);
@@ -120,7 +126,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
     /**
       * @dev receives payment in the form of ERC20 tokens
       */
-    function receiveERC20Payment(uint256 tokenID, address buyer, uint256 paymentAmount, IERC20 paymentToken) external override returns(bool) {
+    function receiveERC20Payment(uint256 tokenID, address buyer, uint256 paymentAmount, IERC20 paymentToken) external override marketplaceContractOnly returns(bool) {
         // Check that payees for that token exist
         require(_payees[tokenID].length > 0);
 
@@ -142,6 +148,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
      * functions].
      */
     receive() external payable virtual override {
+        revert();
     }
 
     /**
