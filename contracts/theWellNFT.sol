@@ -50,7 +50,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         return (caller_ == tokenMappings[tokenId].owner);
     }
 
-    function checkTokenExists(uint256 tokenID) public returns(bool) {
+    function checkTokenExists(uint256 tokenID) public view returns(bool) {
         return _exists(tokenID);
     }
 
