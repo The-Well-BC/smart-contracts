@@ -4,7 +4,13 @@ import "./Admin.sol";
 
 contract TheWellTreasury is WellAdmin {
     uint256 public totalEthRecived;
+
+    // mintfund wallet
     address payable MintFund;
+
+    // well percentage of fees go to this wallet
+    address payable WellWallet;
+
     address ETH;
 
     event TokenDeposited( uint256 indexed amount, IERC20 token, address indexed depositor);
@@ -19,30 +25,47 @@ contract TheWellTreasury is WellAdmin {
         emit ReceivedEther(msg.value, msg.sender);
     }
 
+    function setFeeWallet(address payable wallet_) external wellAdmin {
+        WellWallet = wallet_;
+    }
+
+    function setMintfundWallet(address payable MintFund_) external wellAdmin {
+        MintFund = MintFund_;
+    }
+
     function depositTokens(uint256 amount, IERC20 token) public {
         token.transferFrom(msg.sender, address(this), amount);
         emit TokenDeposited(amount, token, msg.sender);
     }
 
-    function withdrawTokenOrEth(uint256 amount, IERC20 token) public wellAdmin {
+    /**
+      * @dev Sends ERC20 or ether to WellWallet and MintFund
+      * Can be called by anyone but fees will only be sent to the configured addresses
+      * Withdraws The Well fees
+      */
+    function withdrawFees(uint256 amount, IERC20 token) external {
+        // Can only call this function if the WellWallet has been set
+        require(WellWallet != address(0));
+        require(MintFund != address(0));
+
         require(amount >= 1000 wei, "invalid amount to be sent");
+
+        uint256 mintFundDonation = (amount * 25) / 1000;
 
         if(address(token) == ETH) {
             //donate to mintfund
-            uint256 mintFundDonation = (amount * 25) / 1000;
             MintFund.transfer(mintFundDonation);
 
-            // withdraw the rest to caller
+            // withdraw the rest to the WellWallet address
             payable(msg.sender).transfer(amount - mintFundDonation);
-            emit Withdrawal(amount, token);
         } else {
-            //donate to mintfund
-            uint256 mintFundDonation = (amount * 25) / 1000;
+            // donate to mintfund
             token.transfer(MintFund, mintFundDonation);
 
-            // withdraw the rest to caller
+            // withdraw the rest to the WellWallet address
             token.transfer(msg.sender, amount - mintFundDonation);
-            emit Withdrawal(amount, token);
         }
+
+        emit Withdrawal(amount, token);
     }
 }
