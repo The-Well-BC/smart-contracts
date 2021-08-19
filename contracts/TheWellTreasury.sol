@@ -6,17 +6,14 @@ contract TheWellTreasury is WellAdmin {
     uint256 public totalEthRecived;
     address MintFund;
     address ETH;
-    event tokenDeposited(
-        uint256 indexed amount,
-        IERC20 token,
-        address indexed depositor
-    );
+
+    event tokenDeposited( uint256 indexed amount, IERC20 token, address indexed depositor);
     event withdrawal(uint256 indexed amount, IERC20 indexed token);
     event receivedEther(uint256 amount, address sender);
 
-constructor(){
-    ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-}
+    constructor() {
+        ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    }
     receive() external {
         totalEthRecived++;
         emit receivedEther(msg.value, msg.sender);
@@ -29,6 +26,7 @@ constructor(){
 
     function withdrawTokenOrEth(uint256 amount, IERC20 token) public wellAdmin {
         require(amount >= 1000 wei, "invalid amount to be sent");
+
         if (token == ETH) {
             //donate to mintfund
             uint256 mintFundDonation = (amount * 25) / 1000;
