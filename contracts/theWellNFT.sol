@@ -3,7 +3,6 @@
 pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 // import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "./IPayments.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import './Admin.sol';
 import {IMarket} from "./IMarket.sol";
@@ -12,16 +11,16 @@ import {Decimal} from "./Decimal.sol";
 
 contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     struct Token{
-        uint256 priceInEther;
-        address owner;
-        address[] collaborators;
+        address owner; // the address that mints the NFT. Makes important decisions concerning the NFT
+        address[] creators; // address of all creators/collaborators, including the address in owner
+        mapping(address => uint256) creatorShares;
     }
 
     /* auction contract address */
     IMarket marketplaceContractAddress;
 
     /* Payments handler contract */
-    IPayments private paymentsContract;
+    address private paymentsContract;
 
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
@@ -83,10 +82,10 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         marketplaceContractAddress = _marketplaceContract;
     }
 
-    function setPaymentContract(IPayments _paymentContract) public wellAdmin() {
+    function setPaymentContract(address _paymentContract) public wellAdmin() {
         paymentsContract = _paymentContract;
     }
-    function getPaymentsContract() public view returns(IPayments paymentContract) {
+    function getPaymentsContract() public view returns(address paymentContract) {
         return paymentsContract;
     }
 
@@ -104,30 +103,18 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         uint256 _artistCut,
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards
-    ) internal returns(address[] memory) {
+    ) internal {
         require(
             _collaborators.length <= 10,
             "Too many collaborators"
         );
 
-        // Artist is always first collaborator
-        address[] memory payees = new address[](_collaborators.length + 1);
-        uint256[] memory shares = new uint256[](payees.length);
+        // set minter rewards
+        tokenMappings[tokenId].creatorShares[_artistAddr] = _artistCut;
 
-        payees[0] = _artistAddr;
-        shares[0] = _artistCut;
-
-        for (uint8 i = 1; i <= _collaborators.length; i++) {
-            uint8 h = i - 1; // previous index
-
-            payees[i] = _collaborators[h];
-            shares[i] = _collaboratorRewards[h];
+        for (uint8 i = 0; i < _collaborators.length; i++) {
+            tokenMappings[tokenId].creatorShares[_collaborators[i]] = _collaboratorRewards[i];
         }
-
-        // Call PaymentSplitter setShares
-        IPayments(paymentsContract).setShares(tokenId, payees, shares);
-
-        return payees;
     }
 
     /**
@@ -148,10 +135,16 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         uint _ownerPercentage,
         uint _creatorPercentage
     ) public nonReentrant {
-
         uint256 tokenId = nextTokenTracker;
-        tokenMappings[tokenId] = Token(0, msg.sender, _collaborators);
-        address[] memory creators_ = setSplits(
+
+        Token storage token_ = tokenMappings[tokenId];
+        token_.creators = _collaborators;
+        token_.creators.push(msg.sender);
+        token_.owner = msg.sender;
+
+        address[] memory creators_ = tokenMappings[tokenId].creators;
+
+        setSplits(
             tokenId,
             msg.sender,
             _artistCut,
@@ -193,7 +186,16 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
      * @param tokenId_ ID of token
      */
     function tokenCreators(uint256 tokenId_) external view returns (address[] memory) {
-        return IPayments(paymentsContract).payees(tokenId_);
+        return tokenMappings[tokenId_].creators;
+    }
+
+    /**
+     * Returns creator share
+     * @param tokenId_ ID of token
+     * @param creator_ address of creator
+     */
+    function creatorShare(uint256 tokenId_, address creator_) external view returns (uint256) {
+        return tokenMappings[tokenId_].creatorShares[creator_];
     }
 
     // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
