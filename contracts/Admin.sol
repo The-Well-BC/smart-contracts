@@ -38,6 +38,9 @@ contract WellAdmin {
     }
 
     function _addVote(bytes32 operation, address admin) internal {
+        // Check that superadmin hasn't already voted.
+        require( adminOperationMask[operation] & (2 ** (_superAdminIndex[admin] - 1)) == 0, 'admin has already voted');
+
         operationVotes[operation]++;
         adminOperationMask[operation] |= (2 ** (_superAdminIndex[admin] - 1));
         emit VoteAdded(msg.sender, operation);
