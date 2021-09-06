@@ -156,7 +156,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     {
         BidShares memory bidShares;
         bidShares.prevOwner = _prevOwner;
-        bidShares.creator = _creator;
+        bidShares.creators = _creator;
         bidShares.owner = __owner;
         require(
             isValidBidShares(bidShares),
@@ -188,7 +188,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         return
         bidAmount != 0 &&
             (bidAmount ==
-             splitShare(bidShares.creator, bidAmount)
+             splitShare(bidShares.creators, bidAmount)
         .add(splitShare(bidShares.prevOwner, bidAmount))
         .add(splitShare(bidShares.owner, bidAmount)));
     }
@@ -212,7 +212,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         returns (bool)
     {
         return
-        bidShares.creator.value.add(bidShares.owner.value).add(
+        bidShares.creators.value.add(bidShares.owner.value).add(
             bidShares.prevOwner.value
         ) == uint256(100).mul(Decimal.BASE);
     }
@@ -315,7 +315,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     ) public payable override nonReentrant {
         BidShares memory bidShares = _bidShares[tokenId];
         require(
-            bidShares.creator.value.add(bid.sellOnShare.value) <=
+            bidShares.creators.value.add(bid.sellOnShare.value) <=
             uint256(100).mul(Decimal.BASE),
             "Market: Sell on fee invalid for share splitting"
         );
@@ -465,7 +465,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
         uint amountForFees = bid.amount * 125/1000;
         uint newAmount = bid.amount - amountForFees;
 
-        uint256 creatorShare = splitShare(bidShares.creator, newAmount);
+        uint256 creatorShare = splitShare(bidShares.creators, newAmount);
 
         address payable pContract = payable(TheWellNFT(TheWellNFTContract).getPaymentsContract());
 
