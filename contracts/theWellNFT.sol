@@ -16,8 +16,11 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         mapping(address => uint256) creatorShares;
     }
 
-    /* auction contract address */
-    IMarket marketplaceContractAddress;
+    /* The Well Marketplace contract address */
+    IMarket wellMarketplace;
+
+    /* Other approved marketplace contracts */
+    mapping(address => bool) allowedMarketplaceContracts;
 
     /* Payments handler contract */
     address private paymentsContract;
@@ -73,13 +76,19 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         _;
     }
 
-    modifier onlyMarketplaceContract() {
-        require(msg.sender == address(marketplaceContractAddress));
-        _;
+    /**
+      *
+      */
+    function onlyMarketplaceContract(address addr) internal returns (bool) {
+        return (addr == address(wellMarketplace) || allowedMarketplaceContracts[addr] == true);
     }
 
     function setMarketplaceContract(IMarket _marketplaceContract) public wellAdmin() {
-        marketplaceContractAddress = _marketplaceContract;
+        wellMarketplace = _marketplaceContract;
+    }
+
+    function addApprovedMarketplace(address _otherMarketplace) public wellAdmin() {
+        allowedMarketplaceContracts[_otherMarketplace] = true;
     }
 
     function setPaymentContract(address _paymentContract) public wellAdmin() {
@@ -156,7 +165,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         Decimal.D256 memory owner =  Decimal.D256(_ownerPercentage * 10**18);
         Decimal.D256 memory creator =  Decimal.D256(_creatorPercentage * 10**18);
 
-        IMarket(marketplaceContractAddress).setBidShares(tokenId, prevOwner, owner, creator);
+        IMarket(wellMarketplace).setBidShares(tokenId, prevOwner, owner, creator);
 
         _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, _tokenURI);
@@ -165,14 +174,14 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         emit MintNFT(tokenId, _tokenURI, creators_);
     }
 
-    function nftPurchaseTransfer(uint256 tokenId_, address recipient_) external onlyMarketplaceContract {
-        // Transfer media to bid recipient
-        _safeTransfer(
-            ownerOf(tokenId_),
-            recipient_,
-            tokenId_,
-            "NFT purchase transfer"
-        );
+    /**
+      * @dev Block "approve" method where "to" is not in the list of allowed marketplace contracts
+      */
+    function _approve(address to, uint256 tokenId) internal override {
+        if( to != address(0))
+            require(onlyMarketplaceContract(to) == true);
+
+        super._approve(to, tokenId);
     }
 
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {

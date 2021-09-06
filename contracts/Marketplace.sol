@@ -536,9 +536,10 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
             _previousOwner[tokenId] = IERC721(TheWellNFTContract).ownerOf(tokenId);
 
             // Transfer media to bid recipient
-            TheWellNFT(TheWellNFTContract).nftPurchaseTransfer(
-                tokenId,
-                recipient
+            TheWellNFT(TheWellNFTContract).safeTransferFrom(
+                _previousOwner[tokenId],
+                recipient,
+                tokenId
             );
 
             emit TokenPurchasedERC20(tokenId, bid.amount, address(purchaseToken));
