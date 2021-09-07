@@ -5,9 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 // import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import './Admin.sol';
-import {IMarket} from "./IMarket.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Decimal} from "./Decimal.sol";
 
 contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     struct Token{
@@ -17,7 +15,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     }
 
     /* The Well Marketplace contract address */
-    IMarket wellMarketplace;
+    address wellMarketplace;
 
     /* Other approved marketplace contracts */
     mapping(address => bool) allowedMarketplaceContracts;
@@ -83,7 +81,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         return (addr == address(wellMarketplace) || allowedMarketplaceContracts[addr] == true);
     }
 
-    function setMarketplaceContract(IMarket _marketplaceContract) public wellAdmin() {
+    function setMarketplaceContract(address _marketplaceContract) public wellAdmin() {
         wellMarketplace = _marketplaceContract;
     }
 
@@ -139,10 +137,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         uint8 _artistCut,
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards,
-        string memory _tokenURI,
-        uint _prevOwnerPercentage,
-        uint _ownerPercentage,
-        uint _creatorPercentage
+        string memory _tokenURI
     ) public nonReentrant {
         uint256 tokenId = nextTokenTracker;
 
@@ -160,12 +155,6 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
             _collaborators,
             _collaboratorRewards
         );
-
-        Decimal.D256 memory prevOwner =  Decimal.D256(_prevOwnerPercentage * 10**18);
-        Decimal.D256 memory owner =  Decimal.D256(_ownerPercentage * 10**18);
-        Decimal.D256 memory creator =  Decimal.D256(_creatorPercentage * 10**18);
-
-        IMarket(wellMarketplace).setBidShares(tokenId, prevOwner, owner, creator);
 
         _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, _tokenURI);

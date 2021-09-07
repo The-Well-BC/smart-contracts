@@ -28,7 +28,7 @@ describe('Test: Block transfer/approval of nft to non-allowed contracts', functi
     });
 
     beforeEach(async() => {
-        return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], 'https://example.token.com/', 30, 45, 25)
+        return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], 'https://example.token.com/')
         .then(tx => tx.wait())
         .then(tx => {
             tokenID = tx.events.filter(log => log.event == 'MintNFT')[0].args._tokenID;

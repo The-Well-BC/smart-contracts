@@ -5,7 +5,7 @@ const { isMainThread } = require("worker_threads");
 
 const deploy = require('./deploy');
 
-describe('Test: Setting Collaborators', function () {
+describe('Mint NFT with Collaborators', function () {
     let accounts, theWellNFT,
         tokenUri = 'http://example-tokens/s0m3Hash';
 
@@ -19,7 +19,7 @@ describe('Test: Setting Collaborators', function () {
     it('Successfully mints NFT with no collaborators', () => {
 
         let artist = accounts[1];
-        return theWellNFT.connect(artist).mint(100, [], [], tokenUri, 30, 45, 25)
+        return theWellNFT.connect(artist).mint(100, [], [], tokenUri)
         .then(res => res.wait())
         .then(res => {
             let tokenID = res.events.filter(log => {
@@ -37,7 +37,7 @@ describe('Test: Setting Collaborators', function () {
         const collaborator = accounts[2],
             collaboratorShare = 35;
 
-        return theWellNFT.connect(artist).mint(65, [collaborator.address], [collaboratorShare], tokenUri, 30, 45, 25)
+        return theWellNFT.connect(artist).mint(65, [collaborator.address], [collaboratorShare], tokenUri)
         .then(res => res.wait())
         .then(res => {
             let tokenID = res.events.filter(log => {
@@ -57,7 +57,7 @@ describe('Test: Setting Collaborators', function () {
 
         const collaboratorShares = collaborators.map((a, i) => (i + 1) + (i * 3));
 
-        return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, tokenUri, 30, 45, 25)
+        return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, tokenUri)
         .then(res => res.wait())
         .then(res => {
             let tokenID = res.events.filter(log => log.event == 'Transfer')[0]
@@ -88,7 +88,7 @@ describe('Test: Setting Collaborators', function () {
 
         return theWellNFT.connect(artist).mint(65,
             collaborators.map(c =>c.address), collaborators.map(c =>c.shares),
-            tokenUri, 30, 45, 25
+            tokenUri
         )
         .then(res => res.wait())
         .then(res => {
@@ -111,7 +111,7 @@ describe('Test: Setting Collaborators', function () {
             const collaborator = accounts[8],
                 collaboratorShare = 35;
 
-            return theWellNFT.connect(artist).mint(65, [], [], tokenUri, 30, 45, 25)
+            return theWellNFT.connect(artist).mint(65, [], [], tokenUri)
             .then(res => res.wait())
             .then(res => {
                 expect(res.events).to.satisfy(events => {

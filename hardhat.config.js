@@ -12,6 +12,9 @@ module.exports = {
             blockGasLimit: 0x1fffffffffffff,
             allowUnlimitedContractSize: true,
             gas: 12000000,
+            accounts: {
+                count: 20
+            }
         },
         development: {
             url: "http://127.0.0.1:8545",

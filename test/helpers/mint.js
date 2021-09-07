@@ -41,8 +41,7 @@ async function mintNFT(mintSingle=false) {
             65,
             creators.collaborators.map(c => c.address),
             [20, 10, 5],
-            'Qmblah123.json',
-            15, 35, creatorsRoyalties
+            'Qmblah123.json'
         )
     }))
         .then(res => Promise.all(res.map(re => re.wait())))
