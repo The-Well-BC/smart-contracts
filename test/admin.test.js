@@ -11,7 +11,7 @@ async function newContract() {
     return AdminTesterArtifact.deploy();
 }
 
-describe.only('Test: Admin Contract', function () {
+describe('Test: Admin Contract', function () {
     // let contract,
     let deployer, accounts;
 
@@ -130,7 +130,7 @@ describe.only('Test: Admin Contract', function () {
                             return Promise.all(
                                 scenarios[i].superAdmins.map(superAdmin => {
                                     return c.connect(superAdmin).addSuperAdmin(newSuperAdmin.address)
-                                        .then(() => scenarios[i].superAdmins.push(superAdmin))
+                                        .then(() => scenarios[i].superAdmins.push(newSuperAdmin))
                                 })
                             );
                         })
@@ -209,36 +209,51 @@ describe.only('Test: Admin Contract', function () {
             superAdmins, newAdmin, removeAdmin;
 
         beforeEach(async () => {
-            scenarios = [];
+            console.log('starting beforeach');
+            scenarios = [
+                {newSuperAdmins: [accounts[0]]},
+                {newSuperAdmins: [accounts[0], accounts[1]]},
+                {newSuperAdmins: [accounts[0], accounts[1], accounts[2]]}, // for even number of superadmins
+                {newSuperAdmins: [accounts[0], accounts[1], accounts[2], accounts[3]]}, // for odd number of superadmins
+            ];
+
             newAdmin = accounts[5];
             removeAdmin = accounts[0];
 
-            return Promise.all([
-                [accounts[0]],
-                [accounts[0], accounts[1]],
-                [accounts[0], accounts[1], accounts[2]], // for even number of superadmins
-                [accounts[0], accounts[1], accounts[2], accounts[3]], // for odd number of superadmins
-            ].map((_newSuperAdmins, i) => {
+            return Promise.all( scenarios.map((scenario) => {
                 // set superadmins if none
-                if(!scenarios[i]) {
-                    scenarios[i] = { superAdmins: [deployer] };
-                }
+                scenario.superAdmins = [deployer];
 
+                console.log('\n\nABOUT TO SET CONTRACT\nNew SuperAdmins:', scenario.newSuperAdmins.map(a => a.address));
                 return newContract()
-                .then(c => {
-                    scenarios[i].contract = c;
-                    return Promise.all(
-                        _newSuperAdmins.map(newSuperAdmin => {
-                            // Call all previous superadmins to add new superadmin
-                            return Promise.all(
-                                scenarios[i].superAdmins.map(superAdmin => {
-                                    return scenarios[i].contract.connect(superAdmin).addSuperAdmin(newSuperAdmin.address)
-                                        .then(() => scenarios[i].superAdmins.push(superAdmin))
-                                })
-                            );
-                        }).flat()
-                    )
-                });
+                    .then(c => {
+                        scenario.contract = c;
+                        console.log('CONTRACTS SET:', scenario.contract.address);
+                        return Promise.all(
+                            scenario.newSuperAdmins.map(newSuperAdmin => {
+                                console.log('SUPERADMINS for scenario', scenario.superAdmins.map(sa => sa.address));
+                                // Call all previous superadmins to add new superadmin
+                                return Promise.all(
+                                    scenario.superAdmins.map(superAdmin => {
+                                        console.log('super admin', superAdmin.address, 'to add:', newSuperAdmin.address);
+                                        return scenario.contract.connect(superAdmin).addSuperAdmin(newSuperAdmin.address)
+                                            .then(tx => tx.wait())
+                                            .then(res => {
+                                                console.log('EVENTS:', res.events);
+                                                scenario.superAdmins.push(newSuperAdmin)
+                                                console.log('SCENARIO I SUPERADMINS UPDATED:', scenario.superAdmins.map(sa => sa.address));
+                                                return true;
+                                            })
+                                    })
+                                );
+                            }).flat()
+                        )
+                    }).then(() => {
+                        return Promise.all(newSuperAdmins.map(superAdm => {
+                            return scenario.contract.connect(superAdm).superAdminTestFn()
+                                .then(res => expect(res).to.be.true);
+                        }))
+                    });
             }));
         });
 
@@ -265,6 +280,19 @@ describe.only('Test: Admin Contract', function () {
             }))
         });
 
+        it('Disallow multiple votes', function() {
+            return Promise.all( scenarios.map(scenario => {
+                let voter = scenario.superAdmins[0];
+                let { contract } = scenario;
+
+                return contract.connect(voter).removeSuperAdmin(removeAdmin.address)
+                    .then(() => {
+                        return expect( contract.connect(voter).removeSuperAdmin(removeAdmin.address) )
+                            .to.be.reverted
+                    })
+            }))
+        });
+
         it('More than half the superAdmins should be able to vote to remove an admin', function() {
             return Promise.all( scenarios.map(scenario => {
                 const { superAdmins, contract } = scenario;
@@ -273,10 +301,12 @@ describe.only('Test: Admin Contract', function () {
                 if(superAdmins.length % 2 == 0) halfpoint++;
 
                 if(superAdmins.length != 2) {
-                    console.log('SUPER ADMIN LENGTH IN JS:', superAdmins.length);
+                    console.log('\nSUPER ADMIN LENGTH IN JS:', superAdmins.length);
                     let voters = superAdmins.slice(0, halfpoint);
+                    console.log('SUER ADMINS:', superAdmins.map(a => a.address));
 
                     return Promise.all(voters.map( voter => {
+                        console.log('VOTER ADDR:', voter.address);
                         return contract.connect(voter).removeSuperAdmin(removeAdmin.address)
                             .then(tx => tx.wait())
                             .then(tx => {
@@ -289,12 +319,13 @@ describe.only('Test: Admin Contract', function () {
                                             log.args._voter ===  voter.address;
                                     });
                                 });
+
                                 // check that removeAdmin still has superadmin privileges
                                 return contract.connect(removeAdmin).adminTestFn()
                                     .then(res => expect(res).to.be.true);
                             })
 
-                    }))
+                    }).flat())
                         .then(() =>
                             expect( contract.connect(removeAdmin).adminTestFn() ).to.be.reverted
                         );
