@@ -147,17 +147,21 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
     /**
      * @notice Sets bid shares for a particular tokenId. These bid shares must
-     * sum to 100
+     * sum to 100. Can only be set once.
      */
     function setBidShares(uint256 tokenId, Decimal.D256 calldata _prevOwner, Decimal.D256 calldata __owner, Decimal.D256 calldata _creator)
         public
         override
-        onlyMediaCaller
     {
+        // Check bidshares haven't already been set
+        require( _bidShares[tokenId].isSet == false);
+        require( msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner');
+
         BidShares memory bidShares;
         bidShares.prevOwner = _prevOwner;
         bidShares.creators = _creator;
         bidShares.owner = __owner;
+        bidShares.isSet = true;
         require(
             isValidBidShares(bidShares),
             "Market: Invalid bid shares, must sum to 100"

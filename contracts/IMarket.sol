@@ -30,6 +30,8 @@ interface IMarket {
     }
 
     struct BidShares {
+        // default is false. Will use to check whether bidshares have been set
+        bool isSet;
         // % of sale value that goes to the _previous_ owner of the nft
         Decimal.D256 prevOwner;
         // % of sale value that goes to the creators of the nft
