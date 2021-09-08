@@ -45,7 +45,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         nextTokenTracker = 1;
     }
 
-    /** @dev checks if function caller is the artist */
+    /** @dev checks if  caller is the artist/minter */
     function isArtist(uint256 tokenId, address caller_) public returns(bool) {
         return (caller_ == tokenMappings[tokenId].owner);
     }
@@ -141,10 +141,12 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     ) public nonReentrant {
         uint256 tokenId = nextTokenTracker;
 
-        Token storage token_ = tokenMappings[tokenId];
+        Token storage token_;
         token_.creators = _collaborators;
         token_.creators.push(msg.sender);
         token_.owner = msg.sender;
+        //now set the new token_ object into the mapping
+        tokenMappings[tokenId] = token_;
 
         address[] memory creators_ = tokenMappings[tokenId].creators;
 

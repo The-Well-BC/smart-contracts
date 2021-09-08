@@ -155,7 +155,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     {
         // Check bidshares haven't already been set
         require( _bidShares[tokenId].isSet == false);
-        require( msg.sender ==  IERC721(TheWellNFTContract).ownerOf(tokenId), 'Market: Not token owner');
+        require( TheWellNFT(TheWellNFTContract).isArtist(tokenId,msg.sender) == true, 'Market: Not token minter');
 
         BidShares memory bidShares;
         bidShares.prevOwner = _prevOwner;
