@@ -8,31 +8,30 @@ import './Admin.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
-    struct Token{
-        address owner; // the address that mints the NFT. Makes important decisions concerning the NFT
-        address[] creators; // address of all creators/collaborators, including the address in owner
-        mapping(address => uint256) creatorShares;
-    }
+    string internal uriTemplate;
 
     /* The Well Marketplace contract address */
-    address wellMarketplace;
+    address internal wellMarketplace;
 
     /* Other approved marketplace contracts */
-    mapping(address => bool) allowedMarketplaceContracts;
+    address[] public approvedMarketplaceArray;
+    mapping(address => uint) internal approvedMarketplaces;
 
     /* Payments handler contract */
-    address private paymentsContract;
+    address internal paymentsContract;
 
     /* Used to set the tokenID of newly minted tokens */
-    uint256 nextTokenTracker;
+    uint256 internal nextTokenTracker;
+
+    struct Token{
+        address minter; // the address that mints the NFT. Makes important decisions concerning the NFT
+        address[] creators; // address of all creators/collaborators. Includes the address in 'minter'
+        mapping(address => uint256) creatorShares; // mapping of token creators to their share percentages
+        uint48 releaseTime; // optional. Minter can set the time period a buyer has to hold this NFT for.
+    }
 
     /* Mapping from token ID to Token */
-    mapping(uint256 => Token) tokenMappings;
-
-    string uriTemplate;
-
-    // Release Time for timelocked NFTs
-    mapping(uint256 => uint256) internal ReleaseTime;
+    mapping(uint256 => Token) internal tokens;
 
     event MintNFT(uint256 _tokenID, string _contentHash, address[] _creators);
 
@@ -45,54 +44,43 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         nextTokenTracker = 1;
     }
 
-    /** @dev checks if  caller is the artist/minter */
-    function isArtist(uint256 tokenId, address caller_) public returns(bool) {
-        return (caller_ == tokenMappings[tokenId].owner);
+    /** @dev Checks if caller is the artist/minter */
+    function isMinter(uint256 tokenId, address caller_) public view returns(bool) {
+        return (caller_ == tokens[tokenId].minter);
     }
 
-    function checkTokenExists(uint256 tokenID) public view returns(bool) {
+    function checkTokenExists(uint256 tokenID) external view returns(bool) {
         return _exists(tokenID);
     }
 
     /**
-     * @notice Ensure that the provided spender is the approved or the owner of
-     * the media for the specified tokenId
-     */
-    modifier onlyApprovedOrOwner(address spender, uint256 tokenId) {
-        require(
-            _isApprovedOrOwner(spender, tokenId),
-            "Media: Only approved or owner"
-        );
-        _;
-    }
-
-    /**
-     * @notice Require that the token has not been burned and has been minted
-     */
-    modifier onlyExistingToken(uint256 tokenId) {
-        require(_exists(tokenId));
-        _;
-    }
-
-    /**
-      *
+      * @notice Sets the default WellNFT marketplace.
       */
-    function onlyMarketplaceContract(address addr) internal returns (bool) {
-        return (addr == address(wellMarketplace) || allowedMarketplaceContracts[addr] == true);
-    }
-
-    function setMarketplaceContract(address _marketplaceContract) public wellAdmin() {
+    function setMarketplaceContract(address _marketplaceContract) external isAdmin() {
         wellMarketplace = _marketplaceContract;
     }
 
-    function addApprovedMarketplace(address _otherMarketplace) public wellAdmin() {
-        allowedMarketplaceContracts[_otherMarketplace] = true;
+    /**
+      * @notice adds marketplace contracts that are allowed to trade Well NFTs
+      */
+    function addApprovedMarketplace(address _otherMarketplace) external isAdmin() {
+        approvedMarketplaces[_otherMarketplace] = approvedMarketplaceArray.length + 1;
+        approvedMarketplaceArray.push(_otherMarketplace);
     }
 
-    function setPaymentContract(address _paymentContract) public wellAdmin() {
+    /**
+      * @notice adds marketplace contracts that are allowed to trade Well NFTs
+      */
+    function removeApprovedMarketplace(address _otherMarketplace) external isAdmin() {
+        delete approvedMarketplaces[_otherMarketplace];
+        uint index_ = approvedMarketplaces[_otherMarketplace] - 1;
+        delete approvedMarketplaceArray[index_];
+    }
+
+    function setPaymentContract(address _paymentContract) external isAdmin() {
         paymentsContract = _paymentContract;
     }
-    function getPaymentsContract() public view returns(address paymentContract) {
+    function getPaymentsContract() external view returns(address paymentContract) {
         return paymentsContract;
     }
 
@@ -117,10 +105,10 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         );
 
         // set minter rewards
-        tokenMappings[tokenId].creatorShares[_artistAddr] = _artistCut;
+        tokens[tokenId].creatorShares[_artistAddr] = _artistCut;
 
         for (uint8 i = 0; i < _collaborators.length; i++) {
-            tokenMappings[tokenId].creatorShares[_collaborators[i]] = _collaboratorRewards[i];
+            tokens[tokenId].creatorShares[_collaborators[i]] = _collaboratorRewards[i];
         }
     }
 
@@ -138,17 +126,16 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         address[] memory _collaborators,
         uint256[] memory _collaboratorRewards,
         string memory _tokenURI
-    ) public nonReentrant {
+    ) external nonReentrant {
+        require(nextTokenTracker <= 4294967295);
         uint256 tokenId = nextTokenTracker;
 
-        Token storage token_;
+        Token storage token_ = tokens[tokenId];
         token_.creators = _collaborators;
         token_.creators.push(msg.sender);
-        token_.owner = msg.sender;
-        //now set the new token_ object into the mapping
-        tokenMappings[tokenId] = token_;
+        token_.minter = msg.sender;
 
-        address[] memory creators_ = tokenMappings[tokenId].creators;
+        address[] memory creators_ = tokens[tokenId].creators;
 
         setSplits(
             tokenId,
@@ -170,15 +157,13 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
       */
     function _approve(address to, uint256 tokenId) internal override {
         if( to != address(0))
-            require(onlyMarketplaceContract(to) == true);
+            require(to == address(wellMarketplace) || approvedMarketplaces[to] >= 1);
 
         super._approve(to, tokenId);
     }
 
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
-        if( ReleaseTime[tokenId_] <= block.timestamp) {
-            return true;
-        } else return false;
+        return tokens[tokenId_].releaseTime <= block.timestamp;
     }
 
     /**
@@ -186,7 +171,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
      * @param tokenId_ ID of token
      */
     function tokenCreators(uint256 tokenId_) external view returns (address[] memory) {
-        return tokenMappings[tokenId_].creators;
+        return tokens[tokenId_].creators;
     }
 
     /**
@@ -195,19 +180,21 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
      * @param creator_ address of creator
      */
     function creatorShare(uint256 tokenId_, address creator_) external view returns (uint256) {
-        return tokenMappings[tokenId_].creatorShares[creator_];
+        return tokens[tokenId_].creatorShares[creator_];
     }
 
-    // this function aims to mimic a lock up for the token, where transferred are barred for a perod of time after minting
+    // this function aims to mimic a lock up for the token, where transfers are barred for a period of time after minting
     function setReleaseTime(uint256 tokenID, uint256 _time)
-        public nonReentrant onlyExistingToken(tokenID)
+        external nonReentrant
     {
-        require(isArtist(tokenID, msg.sender));
+        require(_exists(tokenID));
+        require(isMinter(tokenID, msg.sender));
+
         uint256 releaseTime = block.timestamp + _time;
-        ReleaseTime[tokenID] = releaseTime;
+        tokens[tokenID].releaseTime = uint48(releaseTime);
     }
 
-    function getTokenReleaseTime(uint256 tokenID) public view returns (uint256) {
-        return ReleaseTime[tokenID];
+    function getTokenReleaseTime(uint256 tokenID) external view returns (uint256) {
+        return tokens[tokenID].releaseTime;
     }
 }

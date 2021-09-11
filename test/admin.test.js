@@ -71,6 +71,10 @@ describe('Test: Admin Contract', function () {
                 });
         });
 
+        it('Should not be able to remove only superadmin', function() {
+            return expect(contract.removeSuperAdmin(deployer.address)).to.be.reverted;
+        });
+
         it('Contract deployer is superAdmin', function() {
             // Contract deployer should be able to add an admin and a super admin
             let newAdmins = [accounts[1], accounts[2]];
@@ -99,43 +103,61 @@ describe('Test: Admin Contract', function () {
         });
     });
 
-    describe('Duplicate admins/superadmins fails', function() {
+    describe('Testing votes with 2 or more SuperAdmins', function() {
         // Test for odd and even number of superAdmins
         let scenarios,
             superAdmins, newAdmin, removeAdmin;
 
         beforeEach(async () => {
-            scenarios = [];
-            newAdmin = accounts[4];
-            removeAdmin = accounts[2];
+            scenarios = [
+                {superAdmins: [accounts[0]]}, // two superadmins
+                {superAdmins: [accounts[0], accounts[1]]}, //three superadmins
+                {superAdmins: [accounts[0], accounts[1], accounts[2]]}, // four superadmins
+                {superAdmins: [accounts[0], accounts[1], accounts[2], accounts[3]]}, // 5 superadmins
+            ];
 
-            return Promise.all([
-                [],
-                [accounts[0]],
-                [accounts[0], accounts[1]],
-                [accounts[0], accounts[1], accounts[2]], // for even number of superadmins
-                [accounts[0], accounts[1], accounts[2], accounts[3]], // for odd number of superadmins
-            ].map((_newSuperAdmins, i) => {
-                // set superadmins if none
-                if(!scenarios[i]) {
-                    scenarios[i] = { superAdmins: [deployer] };
-                }
+            newAdmin = accounts[5];
+            removeAdmin = accounts[0];
 
+            return Promise.all( scenarios.map((scenario, scenarioIndex) => {
                 return newContract()
-                .then(c => {
-                    scenarios[i].contract = c;
-                    return Promise.all(
-                        _newSuperAdmins.map(newSuperAdmin => {
-                            // Call all previous superadmins to add new superadmin
-                            return Promise.all(
-                                scenarios[i].superAdmins.map(superAdmin => {
-                                    return c.connect(superAdmin).addSuperAdmin(newSuperAdmin.address)
-                                        .then(() => scenarios[i].superAdmins.push(newSuperAdmin))
-                                })
-                            );
+                    .then(c => {
+                        scenario.contract = c;
+                        newSuperAdmins_ = scenario.superAdmins;
+
+                        return newSuperAdmins_.map((newSuperAdmin, i) => {
+                            superAdmins_ = [deployer, ...newSuperAdmins_.slice(0, i)];
+
+                            return Promise.all( superAdmins_.map( superAdmin => {
+                                // Call all previous superadmins to add new superadmin
+                                return scenario.contract.connect(superAdmin).addSuperAdmin(newSuperAdmin.address)
+                                    .catch(e => {
+                                        if(!e.message.includes('admin already exists'))
+                                            console.error('\n****ERROR ADDING ADMIN****\n', e);
+                                    });
+                            }))
                         })
-                    )
+                            .reduce((promiseChain, task) => promiseChain.then(() => task), Promise.resolve([]))
+                    })
+            }).flat())
+                .then(() => {
+                    return Promise.all( scenarios.map((scenario) => {
+                        scenario.superAdmins.push(deployer);
+                        return Promise.all(scenario.superAdmins.map(superAdm => {
+                            return scenario.contract.connect(superAdm).superAdminTestFn()
+                                .then(res => expect(res).to.be.true);
+                        }))
+                    }));
                 });
+        });
+
+        it('Either superadmin should be able to add admins on their own', function() {
+            return Promise.all( scenarios.map(scenario => {
+                let {contract, superAdmins} = scenario;
+
+                    return contract.connect(superAdmins[0]).addAdmin(newAdmin.address)
+                        .then(() => contract.connect(newAdmin).adminTestFn())
+                        .then(res => expect(res).to.be.true);
             }));
         });
 
@@ -143,140 +165,43 @@ describe('Test: Admin Contract', function () {
             let superAdmin = deployer;
 
             return Promise.all( scenarios.map(scenario => {
-                let voter = scenario.superAdmins[0];
-                let {contract} = scenario;
+                if(scenario.superAdmins.length < 5) {
+                    let voter = scenario.superAdmins[0];
+                    let {contract} = scenario;
 
-                return expect(
-                    contract.connect(voter).addSuperAdmin(superAdmin.address)
-                ).to.be.reverted;
+                    return expect(
+                        contract.connect(voter).addSuperAdmin(superAdmin.address)
+                    ).to.be.reverted;
 
-                return expect(
-                    contract.connect(superAdmin).superAdminTestFn()
-                ).to.be.reverted;
+                    return expect(
+                        contract.connect(superAdmin).superAdminTestFn()
+                    ).to.be.reverted;
+                }
             }))
-        });
-
-        it('Either superadmin should be able to add admins on their own', function() {
-            let newAdmin = accounts[8];
-
-            return Promise.all( scenarios.map(scenario => {
-                let {contract, superAdmins} = scenario;
-
-                return contract.connect(superAdmins[0]).addAdmin(newAdmin.address)
-                    .then(() => contract.connect(newAdmin).adminTestFn())
-                    .then(res => expect(res).to.be.true);
-            }));
-        });
-    });
-
-    describe('Testing votes with 2 SuperAdmins', function() {
-        let contract, superAdmins;
-
-        beforeEach(() => {
-            return newContract()
-            .then(res => {
-                contract = res;
-
-                superAdmins = [accounts[0]];
-
-                return contract.addSuperAdmin(superAdmins[0].address)
-                .then(tx => tx.wait())
-                .then(res => {
-                    superAdmins.push(deployer);
-                });
-            });
-        });
-
-
-        it('Should add superadmin only after getting two admin votes', function() {
-            let newAdmin = accounts[2];
-
-            return contract.connect(superAdmins[0]).addSuperAdmin(newAdmin.address)
-                .then(() =>
-                    expect(contract.connect(newAdmin).adminTestFn()).to.be.reverted
-                )
-                .then(() => {
-                    return contract.connect(superAdmins[1]).addSuperAdmin(newAdmin.address)
-                        .then(() => contract.connect(newAdmin).superAdminTestFn())
-                        .then(res => expect(res).to.be.true);
-                });
-        });
-    });
-
-    describe('Testing votes with 2 or more SuperAdmins', function() {
-        // Test for odd and even number of superAdmins
-        let scenarios,
-            superAdmins, newAdmin, removeAdmin;
-
-        beforeEach(async () => {
-            console.log('starting beforeach');
-            scenarios = [
-                {newSuperAdmins: [accounts[0]]},
-                {newSuperAdmins: [accounts[0], accounts[1]]},
-                {newSuperAdmins: [accounts[0], accounts[1], accounts[2]]}, // for even number of superadmins
-                {newSuperAdmins: [accounts[0], accounts[1], accounts[2], accounts[3]]}, // for odd number of superadmins
-            ];
-
-            newAdmin = accounts[5];
-            removeAdmin = accounts[0];
-
-            return Promise.all( scenarios.map((scenario) => {
-                // set superadmins if none
-                scenario.superAdmins = [deployer];
-
-                console.log('\n\nABOUT TO SET CONTRACT\nNew SuperAdmins:', scenario.newSuperAdmins.map(a => a.address));
-                return newContract()
-                    .then(c => {
-                        scenario.contract = c;
-                        console.log('CONTRACTS SET:', scenario.contract.address);
-                        return Promise.all(
-                            scenario.newSuperAdmins.map(newSuperAdmin => {
-                                console.log('SUPERADMINS for scenario', scenario.superAdmins.map(sa => sa.address));
-                                // Call all previous superadmins to add new superadmin
-                                return Promise.all(
-                                    scenario.superAdmins.map(superAdmin => {
-                                        console.log('super admin', superAdmin.address, 'to add:', newSuperAdmin.address);
-                                        return scenario.contract.connect(superAdmin).addSuperAdmin(newSuperAdmin.address)
-                                            .then(tx => tx.wait())
-                                            .then(res => {
-                                                console.log('EVENTS:', res.events);
-                                                scenario.superAdmins.push(newSuperAdmin)
-                                                console.log('SCENARIO I SUPERADMINS UPDATED:', scenario.superAdmins.map(sa => sa.address));
-                                                return true;
-                                            })
-                                    })
-                                );
-                            }).flat()
-                        )
-                    }).then(() => {
-                        return Promise.all(newSuperAdmins.map(superAdm => {
-                            return scenario.contract.connect(superAdm).superAdminTestFn()
-                                .then(res => expect(res).to.be.true);
-                        }))
-                    });
-            }));
         });
 
         it('addAdmin should emit a VoteAdded event only, but new superadmin should not be added', function() {
             return Promise.all( scenarios.map(scenario => {
                 let voter = scenario.superAdmins[0];
 
-                return scenario.contract.connect(voter).addSuperAdmin(newAdmin.address)
-                    .then(tx => tx.wait())
-                    .then(tx => {
-                        expect(tx.events).to.have.lengthOf(1);
+                if(scenario.superAdmins.length < 5) {
+                    return scenario.contract.connect(voter).addSuperAdmin(newAdmin.address)
+                        .then(tx => tx.wait())
+                        .then(tx => {
+                            expect(tx.events).to.have.lengthOf(1);
 
-                        expect(tx.events).to.satisfy(logs => {
-                            return logs.some(log => {
-                                return log.event === 'VoteAdded'
-                                    && log.args._voter ===  voter.address;
+                            expect(tx.events).to.satisfy(logs => {
+                                return logs.some(log => {
+                                    return log.event === 'VoteAdded'
+                                        && log.args._voter ===  voter.address;
+                                });
                             });
-                        });
 
-                        return expect(
-                            scenario.contract.connect(newAdmin).superAdminTestFn()
-                        ).to.be.reverted;
-                    });
+                            return expect(
+                                scenario.contract.connect(newAdmin).superAdminTestFn()
+                            ).to.be.reverted;
+                        });
+                }
             }))
         });
 
@@ -293,66 +218,140 @@ describe('Test: Admin Contract', function () {
             }))
         });
 
-        it('More than half the superAdmins should be able to vote to remove an admin', function() {
+        it('Superadmin should not be removed if less than half of superadmins vote to remove', function() {
+            return Promise.all( scenarios.map(scenario => {
+                const { superAdmins, contract } = scenario;
+
+                let halfpoint = Math.floor(superAdmins.length/2);
+
+                let voters = superAdmins.slice(0, halfpoint);
+
+                return contract.connect(removeAdmin).superAdminTestFn()
+                    .then(res => {
+                        expect(res).to.be.true
+
+                        return voters.map( (voter, voterIndex) => {
+                            return contract.connect(voter).removeSuperAdmin(removeAdmin.address)
+                            .then(tx => tx.wait())
+                                .then(tx => {
+                                    let voteEvent = tx.events.some(log => {
+                                        return log.event === 'VoteAdded'
+                                            && log.args._voter ===  voter.address;
+                                    });
+
+                                    expect(voteEvent).to.be.true;
+                                })
+                        })
+                    })
+                    .then(() => {
+                         return contract.connect(removeAdmin).superAdminTestFn()
+                        .then(res => expect(res).to.be.true);
+                    });
+            }).flat())
+        });
+
+
+        it('More than half the superAdmins should be able to vote to remove a superadmin', function() {
             return Promise.all( scenarios.map(scenario => {
                 const { superAdmins, contract } = scenario;
 
                 let halfpoint = Math.ceil(superAdmins.length/2);
                 if(superAdmins.length % 2 == 0) halfpoint++;
 
-                if(superAdmins.length != 2) {
-                    console.log('\nSUPER ADMIN LENGTH IN JS:', superAdmins.length);
-                    let voters = superAdmins.slice(0, halfpoint);
-                    console.log('SUER ADMINS:', superAdmins.map(a => a.address));
+                let voters = superAdmins.slice(0, halfpoint), votes = 0;
 
-                    return Promise.all(voters.map( voter => {
-                        console.log('VOTER ADDR:', voter.address);
-                        return contract.connect(voter).removeSuperAdmin(removeAdmin.address)
+                return contract.connect(removeAdmin).superAdminTestFn()
+                    .then(res => {
+                        expect(res).to.be.true
+
+                        // recurring function here
+                        function voteOp(voterArray, currentIndex) {
+                            let voter = voterArray[currentIndex];
+
+                            return contract.connect(voter).removeSuperAdmin(removeAdmin.address)
                             .then(tx => tx.wait())
-                            .then(tx => {
-                                console.log('SUPER ADMINS boolean log:', tx.events[1].args._boolean);
-                                // console.log('SUPER ADMINS LENGTH:', tx.events[0].args._number.toString());
-                                expect(tx.events).to.satisfy(logs => {
-                                    return logs.some(log => {
+                                .then(tx => {
+                                    let voteEvent = tx.events.some(log => {
                                         return log.event === 'VoteAdded'
-                                            &&
-                                            log.args._voter ===  voter.address;
+                                            && log.args._voter ===  voter.address;
                                     });
+
+                                    if(voteEvent) votes++;
+
+                                    expect(voteEvent).to.be.true;
+                                })
+                                .then(tx => {
+                                    if(votes < halfpoint) {
+                                        return contract.connect(removeAdmin).superAdminTestFn()
+                                            .then(res => expect(res).to.be.true);
+                                    }
+                                    else
+                                        return expect( contract.connect(removeAdmin).superAdminTestFn() ).to.be.reverted
+                                })
+                                .then(() => {
+                                    if(currentIndex > 0) 
+                                        return voteOp(voterArray, currentIndex - 1);
                                 });
+                        }
 
-                                // check that removeAdmin still has superadmin privileges
-                                return contract.connect(removeAdmin).adminTestFn()
-                                    .then(res => expect(res).to.be.true);
-                            })
-
-                    }).flat())
-                        .then(() =>
-                            expect( contract.connect(removeAdmin).adminTestFn() ).to.be.reverted
-                        );
-                }
+                        return voteOp(voters, voters.length - 1);
+                    })
+                    .then(() =>
+                        expect( contract.connect(removeAdmin).superAdminTestFn() ).to.be.reverted
+                    );
             }).flat())
         });
 
-        it.skip('Should need more than half of superAdmins to add new superadmin', function() {
-            return Promise.all( scenarios.map(async scenario => {
+        it('Should need more than half of superAdmins to add new superadmin', function() {
+            return Promise.all( scenarios.map(scenario => {
                 const { superAdmins, contract } = scenario;
 
-                let halfpoint = Math.ceil(superAdmins.length/2);
-                if(superAdmins.length % 2 == 0) halfpoint++;
+                if(superAdmins.length < 5) {
 
-                let voters = superAdmins.slice(0, halfpoint);
+                    let halfpoint = Math.ceil(superAdmins.length/2);
+                    if(superAdmins.length % 2 == 0) halfpoint++;
 
-                // Test that newAdmin doesn't have superadmin privileges yet
-                await expect(contract.connect(newAdmin).superAdminTestFn())
-                    .to.be.revertedWith('is not superadmin')
+                    let voters = superAdmins.slice(0, halfpoint), votes = 0;
 
-                return Promise.all(voters.map( voter => {
-                    contract.connect(voter).addSuperAdmin(newAdmin.address)
-                }))
-                    .then(() => {
-                        return contract.connect(newAdmin).superAdminTestFn()
-                            .then(res => expect(res).to.be.true);
-                    })
+                    return expect(contract.connect(newAdmin).superAdminTestFn()).to.be.reverted
+                        .then(() => {
+                            // recurring function here
+                            function voteOp(voterArray, currentIndex) {
+                                let voter = voterArray[currentIndex];
+
+                                return contract.connect(voter).addSuperAdmin(newAdmin.address)
+                                    .then(tx => tx.wait())
+                                    .then(tx => {
+                                        let voteEvent = tx.events.some(log => {
+                                            return log.event === 'VoteAdded'
+                                                && log.args._voter ===  voter.address;
+                                        });
+
+                                        if(voteEvent) votes++;
+
+                                        expect(voteEvent).to.be.true;
+                                    })
+                                    .then(tx => {
+                                        if(votes < halfpoint) {
+                                            return expect( contract.connect(newAdmin).superAdminTestFn() ).to.be.reverted
+                                        }
+                                        else {
+                                            return contract.connect(newAdmin).superAdminTestFn()
+                                                .then(res => expect(res).to.be.true);
+                                        }
+                                    })
+                                    .then(() => {
+                                        if(currentIndex > 0) 
+                                            return voteOp(voterArray, currentIndex - 1);
+                                    });
+                            }
+
+                            return voteOp(voters, voters.length - 1);
+                        })
+                        .then(() =>
+                            contract.connect(newAdmin).superAdminTestFn().then(res => expect(res).to.be.true)
+                        );
+                }
             }).flat())
         });
     });

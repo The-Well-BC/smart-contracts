@@ -83,7 +83,7 @@ contract TheWellPaymentSplitter is IPayments, Context, ReentrancyGuard, WellAdmi
         return arr.length <= 10;
     }
 
-    function setNFTContract(address nftContractAddress_) external wellAdmin {
+    function setNFTContract(address nftContractAddress_) external isAdmin {
         nftContractAddress = nftContractAddress_;
     }
 

@@ -44,7 +44,7 @@ contract WellCustomResolver is WellAdmin, ABIResolver, AddrResolver, DNSResolver
     /**
       * @dev sets content hash for all domains using this resolver 
       */
-    function setContentHash(bytes calldata hash_) external wellAdmin {
+    function setContentHash(bytes calldata hash_) external isAdmin {
         _contentHash = hash_;
         emit ContenthashChanged(hash_);
     }

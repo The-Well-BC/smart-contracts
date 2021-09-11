@@ -25,11 +25,11 @@ contract TheWellTreasury is WellAdmin {
         emit ReceivedEther(msg.value, msg.sender);
     }
 
-    function setFeeWallet(address payable wallet_) external wellAdmin {
+    function setFeeWallet(address payable wallet_) external isAdmin {
         WellWallet = wallet_;
     }
 
-    function setMintfundWallet(address payable MintFund_) external wellAdmin {
+    function setMintfundWallet(address payable MintFund_) external isAdmin {
         MintFund = MintFund_;
     }
 
