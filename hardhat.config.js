@@ -5,6 +5,7 @@
 require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
+require("hardhat-gas-reporter");
 
 module.exports = {
     networks: {
@@ -39,6 +40,10 @@ module.exports = {
         alphaSort: true,
         runOnCompile: true,
         disambiguatePaths: false,
+    },
+    gasReporter: {
+        currency: 'CHF',
+        gasPrice: 21
     },
     settings: {
         optimizer: {
