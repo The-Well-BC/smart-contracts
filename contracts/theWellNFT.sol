@@ -77,6 +77,10 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         delete approvedMarketplaceArray[index_];
     }
 
+    function getApprovedMarketplaces() external view returns(address[] memory) {
+        return approvedMarketplaceArray;
+    }
+
     function setPaymentContract(address _paymentContract) external isAdmin() {
         paymentsContract = _paymentContract;
     }
