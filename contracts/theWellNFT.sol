@@ -8,20 +8,20 @@ import './Admin.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
-    string internal uriTemplate;
+    string uriTemplate;
 
     /* The Well Marketplace contract address */
-    address internal wellMarketplace;
+    address wellMarketplace;
 
     /* Other approved marketplace contracts */
-    address[] public approvedMarketplaceArray;
-    mapping(address => uint) internal approvedMarketplaces;
+    address[] approvedMarketplaceArray;
+    mapping(address => uint) approvedMarketplaces;
 
     /* Payments handler contract */
-    address internal paymentsContract;
+    address paymentsContract;
 
     /* Used to set the tokenID of newly minted tokens */
-    uint256 internal nextTokenTracker;
+    uint256 nextTokenTracker;
 
     struct Token{
         address minter; // the address that mints the NFT. Makes important decisions concerning the NFT
@@ -31,7 +31,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
     }
 
     /* Mapping from token ID to Token */
-    mapping(uint256 => Token) internal tokens;
+    mapping(uint256 => Token) tokens;
 
     event MintNFT(uint256 _tokenID, string _contentHash, address[] _creators);
 
