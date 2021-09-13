@@ -25,8 +25,8 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     struct Token{
         address minter; // the address that mints the NFT. Makes important decisions concerning the NFT
         address[] creators; // address of all creators/collaborators. Includes the address in 'minter'
-        mapping(address => uint256) creatorShares; // mapping of token creators to their share percentages
         uint48 releaseTime; // optional. Minter can set the time period a buyer has to hold this NFT for.
+        mapping(address => uint256) creatorShares; // mapping of token creators to their share percentages
         string mediaHash; // media URI
         string metadataURI; // metadata URI
     }
@@ -36,8 +36,6 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
 
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokens;
-
-    event MintNFT(uint256 _tokenID, string _mediaHash, string _metadataHash, address[] _creators);
 
     constructor(
         string memory name_,
@@ -131,10 +129,10 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
 
     function mint(
         uint8 _artistCut,
-        address[] memory collaborators_,
-        uint256[] memory collaboratorRewards_,
-        string memory mediaHash_,
-        string memory metadataURI_
+        address[] calldata collaborators_,
+        uint256[] calldata collaboratorRewards_,
+        string calldata mediaHash_,
+        string calldata metadataURI_
     ) external nonReentrant {
         require(nextTokenTracker <= 4294967295);
 
@@ -148,8 +146,6 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         token_.mediaHash = mediaHash_;
         token_.metadataURI = metadataURI_;
 
-        address[] memory creators_ = tokens[tokenId].creators;
-
         setSplits(
             tokenId,
             msg.sender,
@@ -162,8 +158,6 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         mediaHashes[mediaHash_] = true;
 
         nextTokenTracker++;
-
-        emit MintNFT(tokenId, mediaHash_, metadataURI_, creators_);
     }
 
     /**

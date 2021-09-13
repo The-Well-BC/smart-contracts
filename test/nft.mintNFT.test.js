@@ -139,7 +139,7 @@ describe('Mint NFT', function () {
         });
     });
 
-    it('MintNFT Event should return artist nd collaborators, tokenURI and metadataURI', () => {
+    it('Transfer Event should return artist nd collaborators, tokenURI and metadataURI', () => {
         const mediaHash = faker.git.commitSha();
         const metadataUri = faker.datatype.string();
 
@@ -151,16 +151,15 @@ describe('Mint NFT', function () {
         return theWellNFT.connect(artist).mint(65, [collaborator.address], [collaboratorShare], mediaHash, metadataUri)
             .then(res => res.wait())
             .then(res => {
-                let mintEvents = res.events.filter(log => log.event == 'MintNFT');
-                expect(mintEvents).to.have.lengthOf(1);
+                let mintEvents = res.events.filter(log => log.event == 'Transfer');
+                expect(res.events).to.have.lengthOf(1);
 
                 let mintEvent = mintEvents[0];
 
-                expect( mintEvent.args._creators ).
-                    to.have.members([artist.address, collaborator.address]);
+                expect( mintEvent.args.from ).
+                    to.equal('0x0000000000000000000000000000000000000000');
 
-                expect( mintEvent.args._metadataHash ).to.equal(metadataUri);
-                return expect( mintEvent.args._mediaHash ).to.equal(mediaHash);
+                expect(mintEvent.args.to).to.equal(artist.address);
             });
     })
 })

@@ -21,8 +21,8 @@ describe('Mint NFT with Collaborators', function () {
             .then(res => res.wait())
             .then(res => {
                 let tokenID = res.events.filter(log => {
-                    return log.event == 'MintNFT'
-                })[0].args._tokenID;
+                    return log.event == 'Transfer'
+                })[0].args.tokenId;
 
                 return theWellNFT.tokenCreators(tokenID)
             }).then(res => {
@@ -42,8 +42,8 @@ describe('Mint NFT with Collaborators', function () {
             .then(res => res.wait())
             .then(res => {
                 let tokenID = res.events.filter(log => {
-                    return log.event == 'MintNFT'
-                })[0].args._tokenID;
+                    return log.event == 'Transfer'
+                })[0].args.tokenId;
 
                 return theWellNFT.tokenCreators(tokenID)
             }).then(res => {

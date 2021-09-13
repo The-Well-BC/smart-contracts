@@ -32,7 +32,7 @@ describe('Test: Block transfer/approval of nft to non-allowed contracts', functi
         return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], faker.datatype.string(), 'Qm1metadata')
         .then(tx => tx.wait())
         .then(tx => {
-            tokenID = tx.events.filter(log => log.event == 'MintNFT')[0].args._tokenID;
+            tokenID = tx.events.filter(log => log.event == 'Transfer')[0].args.tokenId;
             tokenID = tokenID.toString();
         });
     });
