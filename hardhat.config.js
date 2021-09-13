@@ -7,6 +7,9 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-gas-reporter");
 
+// Tasks
+require('./tasks/deploy');
+
 module.exports = {
     networks: {
         hardhat: {
