@@ -91,9 +91,8 @@ describe('Admin', function () {
                         .then(tx => {
                             expect(tx.events).to.satisfy(logs => {
                                 return logs.some(log => {
-                                    return log.event === 'NewAdmin'
-                                        && log.args._admin ===  newSuperAdmin.address
-                                        && log.args.isSuperAdmin === true;
+                                    return log.event === 'NewSuperAdmin'
+                                        && log.args.admin_ ===  newSuperAdmin.address;
                                 });
                             });
 

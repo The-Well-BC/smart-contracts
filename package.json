@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "npm run abi && . ./.env.local && npx hardhat run --network development scripts/local-deploy.js",
     "dev:console": ". ./.env.local && npx hardhat console",
+    "clean": ". ./.env.local && npx hardhat clean",
     "test": ". ./.env.local && nodemon -e js,sol --exec 'hardhat test'",
     "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
     "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ @ensdomains/=$(pwd)/node_modules/@ensdomains/ --abi contracts/*.sol -o abis --overwrite",

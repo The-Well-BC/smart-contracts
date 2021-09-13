@@ -69,9 +69,9 @@ contract WellAdmin {
             _totalSuperAdmins++;
             _totalSuperAdminsAdded++;
             _superAdminIndex[_newSuperAdmin] = _totalSuperAdminsAdded;
-        }
 
             emit NewSuperAdmin(_newSuperAdmin);
+        }
     }
 
     function setAdmin(address _newAdmin) public isSuperAdmin {
