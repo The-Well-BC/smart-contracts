@@ -34,5 +34,5 @@ module.exports = async function() {
     unitFresh  = 10 ** parseInt((await fresh.decimals()).toString());
     unitWell = 10 ** parseInt((await well.decimals()).toString());
 
-    return { registrar, resolver, registry, ens, well, unitWell, fresh, weth, unitFresh, crowdsale, accounts, nft, marketplace, paymentSplitter }
+    return { baseURI, registrar, resolver, registry, ens, well, unitWell, fresh, weth, unitFresh, crowdsale, accounts, nft, marketplace, paymentSplitter }
 }

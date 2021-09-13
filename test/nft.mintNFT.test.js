@@ -6,18 +6,18 @@ const {
   expectRevert, // Assertions for transactions that should fail
 } = require('@openzeppelin/test-helpers');
 
+const faker = require('faker');
+
 const deploy = require('./deploy');
 
 describe('Mint NFT', function () {
     let name = "The Monalisa";
 
     let theWellNFT, accounts, artists, collaborators;
+    let baseURI = 'http://localhost:8002/ipfs/';
 
     before(async function() {
-        let deployed = await deploy();
-        accounts = deployed.accounts;
-
-        theWellNFT = deployed.nft;
+        ({ accounts, nft:theWellNFT, baseURI } = await deploy());
 
         // Array of artists. Each test should use a different artist so we have a clean slate
         artists = [accounts[0], accounts[1], accounts[2], accounts[7]];
@@ -25,11 +25,10 @@ describe('Mint NFT', function () {
     });
 
     it('Check default NFT URI', () => {
-        let baseURI = 'http://localhost:8002/ipfs/';
         const artistWallet = artists[0], artist = artists[0].address;
-        let tokenID, tokenURI = 'Qmblah123.json';
+        let tokenID, metadataURI = faker.datatype.string();
 
-        return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], tokenURI)
+        return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], 'asdkf', metadataURI)
         .then(res => res.wait())
         .then(res => {
             tokenID = res.events.filter(log => log.event == 'Transfer')[0]
@@ -37,31 +36,57 @@ describe('Mint NFT', function () {
             // Check token URI
             return theWellNFT.tokenURI(tokenID)
         }).then(uri => {
-            expect(uri).to.equal(baseURI + tokenURI);
+            expect(uri).to.equal(baseURI + metadataURI);
         });
     });
 
-    it('Set Token URI', () => {
-        const artistWallet=artists[1], artist = artistWallet.address;
-        let tokenID;
+    it('tokenURI() method should return metadata uri', function() {
+        const mediaUri = faker.datatype.string();
+        const metadataUri = faker.datatype.string();
 
-        return theWellNFT.connect(artistWallet).mint(65, [collaborators[1]], [35], 'Qmabcdefg.json')
-        .then(res => res.wait())
-        .then(res => {
-            tokenID = res.events.filter(log => log.event == 'Transfer')[0]
-                           .args.tokenId.toString();
+        let artist = accounts[9];
+        let collaborators = [ accounts[3].address, accounts[4].address,
+            accounts[5].address, accounts[7].address ];
 
-            // Check token URI
-            return theWellNFT.tokenURI(tokenID)
-        }).then(uri => {
-            // expect(uri).to.equal('https://example.com/Qmabcdefg.json');
-        });
+        const collaboratorShares = collaborators.map((a, i) => (i + 1) + (i * 3));
+
+        return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, mediaUri, metadataUri)
+            .then(res => res.wait())
+            .then(res => {
+                let tokenID = res.events.filter(log => log.event == 'Transfer')[0]
+                    .args.tokenId.toString();
+
+                return theWellNFT.tokenURI(tokenID)
+            }).then(res => 
+                expect(res).to.have.equal(baseURI + metadataUri)
+            )
+    });
+
+    it('tokenMediaURI() method should return token media uri', function() {
+        const mediaUri = faker.datatype.string();
+        const metadataUri = faker.datatype.string();
+
+        let artist = accounts[9];
+        let collaborators = [ accounts[3].address, accounts[4].address ];
+
+        const collaboratorShares = collaborators.map((a, i) => (i + 1) + (i * 3));
+
+        return theWellNFT.connect(artist).mint(65, collaborators, collaboratorShares, mediaUri, metadataUri)
+            .then(res => res.wait())
+            .then(res => {
+                let tokenID = res.events.filter(log => log.event == 'Transfer')[0]
+                    .args.tokenId.toString();
+
+                return theWellNFT.tokenMediaURI(tokenID)
+            }).then(res => 
+                expect(res).to.have.equal(baseURI + mediaUri)
+            )
     });
 
     it('Check artist NFT balance - No collaborators', async () => {
         const artistWallet=artists[2], artist = artistWallet.address;
 
-        return theWellNFT.connect(artistWallet).mint(100, [], [], '')
+        return theWellNFT.connect(artistWallet).mint(100, [], [], faker.datatype.string(), faker.datatype.string())
         .then(tx => tx.wait())
         .then(tx => {
             expect(
@@ -89,7 +114,7 @@ describe('Mint NFT', function () {
         const collaborator = accounts[5].address,
             collaboratorShare = 35;
 
-        return theWellNFT.connect(artistWallet).mint(65, [collaborator], [collaboratorShare], 'asdf.json')
+        return theWellNFT.connect(artistWallet).mint(65, [collaborator], [collaboratorShare], 'asdf.json', faker.datatype.string())
         .then(res => res.wait())
         .then(res => {
             expect(res.events).to.satisfy(events => {
@@ -113,4 +138,29 @@ describe('Mint NFT', function () {
                 .to.equal('0');
         });
     });
+
+    it('MintNFT Event should return artist nd collaborators, tokenURI and metadataURI', () => {
+        const mediaHash = faker.git.commitSha();
+        const metadataUri = faker.datatype.string();
+
+        let artist = accounts[9];
+
+        const collaborator = accounts[8],
+            collaboratorShare = 35;
+
+        return theWellNFT.connect(artist).mint(65, [collaborator.address], [collaboratorShare], mediaHash, metadataUri)
+            .then(res => res.wait())
+            .then(res => {
+                let mintEvents = res.events.filter(log => log.event == 'MintNFT');
+                expect(mintEvents).to.have.lengthOf(1);
+
+                let mintEvent = mintEvents[0];
+
+                expect( mintEvent.args._creators ).
+                    to.have.members([artist.address, collaborator.address]);
+
+                expect( mintEvent.args._metadataHash ).to.equal(metadataUri);
+                return expect( mintEvent.args._mediaHash ).to.equal(mediaHash);
+            });
+    })
 })

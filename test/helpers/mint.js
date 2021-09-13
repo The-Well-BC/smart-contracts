@@ -1,4 +1,5 @@
 const deploy = require('../deploy');
+const faker = require('faker');
 
 async function mintNFT(mintSingle=false) {
     let deployed = await deploy();
@@ -41,7 +42,8 @@ async function mintNFT(mintSingle=false) {
             65,
             creators.collaborators.map(c => c.address),
             [20, 10, 5],
-            'Qmblah123.json'
+            faker.datatype.string(),
+            faker.datatype.string()
         )
     }))
         .then(res => Promise.all(res.map(re => re.wait())))

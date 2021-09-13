@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.4;
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 // import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import './Admin.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
+contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     string uriTemplate;
 
     /* The Well Marketplace contract address */
@@ -28,12 +27,17 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         address[] creators; // address of all creators/collaborators. Includes the address in 'minter'
         mapping(address => uint256) creatorShares; // mapping of token creators to their share percentages
         uint48 releaseTime; // optional. Minter can set the time period a buyer has to hold this NFT for.
+        string mediaHash; // media URI
+        string metadataURI; // metadata URI
     }
+
+    // Reverse mapping for token mediaHashes
+    mapping(string => bool) private mediaHashes;
 
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokens;
 
-    event MintNFT(uint256 _tokenID, string _contentHash, address[] _creators);
+    event MintNFT(uint256 _tokenID, string _mediaHash, string _metadataHash, address[] _creators);
 
     constructor(
         string memory name_,
@@ -88,7 +92,7 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
         return paymentsContract;
     }
 
-    function setBaseURI(string memory uriTemplate_) internal {
+    function setBaseURI(string memory uriTemplate_) public isAdmin() {
         uriTemplate = uriTemplate_;
     }
 
@@ -121,23 +125,28 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
       * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
       * Will also set the token URI
       * @param _artistCut Percentage of sales the minter gets.
-      * @param _collaborators Array of other collaborators that contributed to the art.
-      * @param _collaboratorRewards Array of percentage of sale that each collaborator gets.
+      * @param collaborators_ Array of other collaborators that contributed to the art.
+      * @param collaboratorRewards_ Array of percentage of sale that each collaborator gets.
       */
 
     function mint(
         uint8 _artistCut,
-        address[] memory _collaborators,
-        uint256[] memory _collaboratorRewards,
-        string memory _tokenURI
+        address[] memory collaborators_,
+        uint256[] memory collaboratorRewards_,
+        string memory mediaHash_,
+        string memory metadataURI_
     ) external nonReentrant {
         require(nextTokenTracker <= 4294967295);
+
+        require(mediaHashes[mediaHash_] == false, 'A token has already been minted with this media');
         uint256 tokenId = nextTokenTracker;
 
         Token storage token_ = tokens[tokenId];
-        token_.creators = _collaborators;
+        token_.creators = collaborators_;
         token_.creators.push(msg.sender);
         token_.minter = msg.sender;
+        token_.mediaHash = mediaHash_;
+        token_.metadataURI = metadataURI_;
 
         address[] memory creators_ = tokens[tokenId].creators;
 
@@ -145,15 +154,60 @@ contract TheWellNFT is ERC721URIStorage, ReentrancyGuard, WellAdmin {
             tokenId,
             msg.sender,
             _artistCut,
-            _collaborators,
-            _collaboratorRewards
+            collaborators_,
+            collaboratorRewards_
         );
 
         _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, _tokenURI);
+        mediaHashes[mediaHash_] = true;
+
         nextTokenTracker++;
 
-        emit MintNFT(tokenId, _tokenURI, creators_);
+        emit MintNFT(tokenId, mediaHash_, metadataURI_, creators_);
+    }
+
+    /**
+     * @dev See {IERC721Metadata-tokenURI}.
+     * Returns metadata uri for token tokenId
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+
+        string memory tokenMetadataURI_ = tokens[tokenId].metadataURI;
+        string memory base = _baseURI();
+
+        // If there is no base URI, return the token URI.
+        if (bytes(base).length == 0) {
+            return tokenMetadataURI_;
+        }
+        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+        if (bytes(tokenMetadataURI_).length > 0) {
+            return string(abi.encodePacked(base, tokenMetadataURI_));
+        }
+
+        return super.tokenURI(tokenId);
+    }
+
+    /**
+      * Returns media uri for token
+      */
+    function tokenMediaURI(uint256 tokenId) public view virtual returns (string memory) {
+        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+
+        string memory tokenMediaURI_ = tokens[tokenId].mediaHash;
+        string memory base = _baseURI();
+
+        // If there is no base URI, return the token URI.
+        if (bytes(base).length == 0) {
+            return tokenMediaURI_;
+        }
+
+        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+        if (bytes(tokenMediaURI_).length > 0) {
+            return string(abi.encodePacked(base, tokenMediaURI_));
+        }
+
+        return super.tokenURI(tokenId);
     }
 
     /**

@@ -40,8 +40,9 @@ describe.skip('Test: NFT bids', function() {
                 artistPercentage,
                 collaborators.map(c => c.address),
                 collaboratorPercentages,
-                'Qmblah123.json',
-                15, creatorsRoyalties, 35
+                15, creatorsRoyalties, 35,
+                'Qmblah123abc',
+                '1metadata.json'
             )
                 .then(res => res.wait())
                 .then(res => {

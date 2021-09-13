@@ -1,5 +1,6 @@
 const chai = require('chai');
 const { expect } = chai;
+const faker = require('faker');
 
 const deploy = require('./deploy');
 
@@ -28,7 +29,7 @@ describe('Test: Block transfer/approval of nft to non-allowed contracts', functi
     });
 
     beforeEach(async() => {
-        return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], 'https://example.token.com/')
+        return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], faker.datatype.string(), 'Qm1metadata')
         .then(tx => tx.wait())
         .then(tx => {
             tokenID = tx.events.filter(log => log.event == 'MintNFT')[0].args._tokenID;
