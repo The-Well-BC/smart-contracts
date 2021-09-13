@@ -28,12 +28,19 @@ module.exports = {
             gas: 7000000,
         },
         ropsten: {
-            url: process.env.INFURA_ROPSTEN_API_KEY,
+            url: `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`,
             accounts: [ `0x${ process.env.PRIVATE_KEY }` ],
             chainId: 3,
             networkCheckTimeout: 100000,
-            gas: 8000000,
-            gasPrice: 100000000000
+            // gas: 8000000,
+            // gasPrice: 100000000000
+        },
+        mainnet: {
+            url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+            accounts: [ `0x${ process.env.PRIVATE_KEY }` ],
+            chainId: 1,
+            networkCheckTimeout: 100000,
+            // gas: 8000000,
         }
     },
     etherscan: {
@@ -60,17 +67,11 @@ module.exports = {
             settings: {
                 optimizer: {
                     enabled: true,
-                    runs: 201
+                    runs: 223
                 }
             },
         }, {
-            version: "0.4.18",
-            settings: {
-                optimizer: {
-                    enabled: true,
-                    runs: 201
-                }
-            },
+            version: "0.4.18"
         }]
     }
 };
