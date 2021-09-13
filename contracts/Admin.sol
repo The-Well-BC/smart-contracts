@@ -4,14 +4,14 @@ pragma solidity ^0.8.4;
 contract WellAdmin {
     uint256 private _totalSuperAdmins; // Total number of superadmins
     uint256 private _totalSuperAdminsAdded; // +1 everytime a superadmin is added. Never decreased.
-    address public _admin;
-    mapping(address => uint256) internal _superAdminIndex; // starts at 1
+    address public admin;
+    mapping(address => uint256) public _superAdminIndex; // starts at 1
 
-    mapping(bytes32 => uint256) internal operationVotes;
-    mapping(bytes32 => uint256) internal adminOperationMask;
+    mapping(bytes32 => uint256) operationVotes;
+    mapping(bytes32 => uint256) adminOperationMask;
 
-    event NewAdmin(address _admin, bool isSuperAdmin);
-    event RemoveAdmin(address _admin, bool isSuperAdmin);
+    event NewSuperAdmin(address admin_);
+    event RemoveSuperAdmin(address admin_);
     event VoteAdded(address _voter, bytes32 operation);
 
     constructor() {
@@ -19,11 +19,11 @@ contract WellAdmin {
         _totalSuperAdminsAdded = 0;
 
         _addSuperAdmin(msg.sender);
-        addAdmin(msg.sender);
+        setAdmin(msg.sender);
     }
 
     modifier isAdmin() {
-        require(_admin == msg.sender, 'is not Admin');
+        require(admin == msg.sender, 'is not Admin');
         _;
     }
 
@@ -32,25 +32,29 @@ contract WellAdmin {
         _;
     }
 
-    function _hasEnoughVotes(bytes32 operation) internal view returns(bool) {
-        if(_totalSuperAdmins < 2 || (operationVotes[operation] > (_totalSuperAdmins / 2))) {
+    /**
+      * Checks if operation has enough votes. Will reset votes if enough votes are reached for the operation
+      */
+    function _hasEnoughVotes(bytes32 operation) internal returns(bool) {
+        if(_totalSuperAdmins < 2 || (operationVotes[operation] > (_totalSuperAdmins / 2))) { 
+            // Reset votes
+            delete operationVotes[operation];
+            delete adminOperationMask[operation];
+
             return true;
         } else
             return false;
     }
 
-    function _resetVotes(bytes32 operation) internal {
-        delete operationVotes[operation];
-        delete adminOperationMask[operation];
-    }
+    function _addVote(bytes32 operation, address admin_) internal {
+        if(_totalSuperAdmins > 1) {
+            // Check that superadmin hasn't already voted.
+            require( adminOperationMask[operation] & (2 ** (_superAdminIndex[admin_] - 1)) == 0, 'Duplicate vote');
 
-    function _addVote(bytes32 operation, address admin) internal {
-        // Check that superadmin hasn't already voted.
-        require( adminOperationMask[operation] & (2 ** (_superAdminIndex[admin] - 1)) == 0, 'Duplicate vote');
-
-        operationVotes[operation]++;
-        adminOperationMask[operation] |= (2 ** (_superAdminIndex[admin] - 1));
-        emit VoteAdded(msg.sender, operation);
+            operationVotes[operation]++;
+            adminOperationMask[operation] |= (2 ** (_superAdminIndex[admin_] - 1));
+            emit VoteAdded(msg.sender, operation);
+        }
     }
 
     function _addSuperAdmin(address _newSuperAdmin) private {
@@ -59,48 +63,53 @@ contract WellAdmin {
 
         bytes32 op = keccak256(msg.data);
 
-        if(_totalSuperAdmins > 1)
-            _addVote(op, msg.sender);
+        _addVote(op, msg.sender);
 
         if(_hasEnoughVotes(op)) {
-            _superAdminIndex[_newSuperAdmin] > 0;
             _totalSuperAdmins++;
             _totalSuperAdminsAdded++;
             _superAdminIndex[_newSuperAdmin] = _totalSuperAdminsAdded;
+        }
 
-            emit NewAdmin(_newSuperAdmin, true);
+            emit NewSuperAdmin(_newSuperAdmin);
+    }
 
-            _resetVotes(op);
+    function setAdmin(address _newAdmin) public isSuperAdmin {
+        bytes32 op = keccak256(msg.data);
+
+        _addVote(op, msg.sender);
+
+        if(_hasEnoughVotes(op)) {
+            admin = _newAdmin;
         }
     }
 
-    function addAdmin(address _newAdmin) public isSuperAdmin {
-        _admin = _newAdmin;
+    function removeAdmin() external isSuperAdmin {
+        bytes32 op = keccak256(msg.data);
 
-        emit NewAdmin(_newAdmin, false);
+        _addVote(op, msg.sender);
+
+        if(_hasEnoughVotes(op)) {
+            admin = address(0);
+        }
     }
 
     function addSuperAdmin(address _newAdmin) external isSuperAdmin {
         _addSuperAdmin(_newAdmin);
     }
 
-    function removeAdmin() public isSuperAdmin {
-        _admin = address(0);
-    }
-
-    function removeSuperAdmin(address _adminToRemove) public isSuperAdmin {
+    function removeSuperAdmin(address _adminToRemove) external isSuperAdmin {
         require(_totalSuperAdmins > 1, 'too few superadmins');
         require(_superAdminIndex[_adminToRemove] != 0, 'admin already removed');
 
         bytes32 op = keccak256(msg.data);
-        if(_totalSuperAdmins > 1)
-            _addVote(op, msg.sender);
+        _addVote(op, msg.sender);
 
         if(_hasEnoughVotes(op)) {
             delete _superAdminIndex[_adminToRemove];
             _totalSuperAdmins--;
 
-            _resetVotes(op);
+            emit RemoveSuperAdmin(_adminToRemove);
         }
     }
 }
