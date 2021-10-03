@@ -17,7 +17,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     mapping(address => uint) approvedMarketplaces;
 
     /* Payments handler contract */
-    address paymentsContract;
+    address public paymentsContract;
 
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
@@ -71,7 +71,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     }
 
     /**
-      * @notice adds marketplace contracts that are allowed to trade Well NFTs
+      * @notice removes marketplace contracts from list of marketplaces allowed to trade Well NFTs
       */
     function removeApprovedMarketplace(address _otherMarketplace) external isAdmin() {
         delete approvedMarketplaces[_otherMarketplace];
@@ -85,9 +85,6 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
 
     function setPaymentContract(address _paymentContract) external isAdmin() {
         paymentsContract = _paymentContract;
-    }
-    function getPaymentsContract() external view returns(address paymentContract) {
-        return paymentsContract;
     }
 
     function setBaseURI(string memory uriTemplate_) public isAdmin() {
@@ -134,7 +131,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         string calldata mediaHash_,
         string calldata metadataURI_
     ) external nonReentrant {
-        require(nextTokenTracker <= 4294967295);
+        require(nextTokenTracker <= 4294967295); // why 
 
         require(mediaHashes[mediaHash_] == false, 'A token has already been minted with this media');
         uint256 tokenId = nextTokenTracker;
