@@ -131,8 +131,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         string calldata mediaHash_,
         string calldata metadataURI_
     ) external nonReentrant {
-        require(nextTokenTracker <= 4294967295); // why 
-
+        
         require(mediaHashes[mediaHash_] == false, 'A token has already been minted with this media');
         uint256 tokenId = nextTokenTracker;
 
