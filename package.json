@@ -19,7 +19,7 @@
     "hh-verify:ropsten": ". ./.env.local && npx hardhat run --network ropsten scripts/verifyContracts.js"
   },
   "optionalDependencies": {
-    "fsevents": "^2.0.7"
+    "fsevents": "^2.x.x"
   },
   "dependencies": {
     "@ensdomains/ens-contracts": "^0.0.4",
