@@ -10,12 +10,16 @@
     "test": ". ./.env.local && nodemon -e js,sol --exec 'hardhat test'",
     "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
     "deploy": ". ./.env.local && npx hardhat deploy",
-    "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ @ensdomains/=$(pwd)/node_modules/@ensdomains/ --abi contracts/*.sol -o abis --overwrite",
+    "verify": ". ./.env.local && npx hardhat verify",
+    "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ @ensdomains/=$(pwd)/node_modules/@ensdomains/ --abi contracts/*.sol contracts/TestContracts/weth-sample.sol -o abis --overwrite",
     "ropsten:migrate": "npm run ropsten-deploy",
     "ropsten:console": ". ./.env.local && npx hardhat console --network ropsten",
     "verify-contracts:ropsten": ". ./.env.local && truffle run verify Well@0x41b366b7803D9157812EdEd524272F153683D719 --network ropsten && truffle run verify TheWellNFT@0x60e87ef45a6b938e75dffdd667c3fe37fa723b5a --network ropsten",
     "hh-verify-old:ropsten": ". ./.env.local && npx hardhat compile && npx hardhat verify --network ropsten 0xc101120AcD3C799799A43cEDD44F13BA77a82fbd && npx hardhat verify --network ropsten 0x60e87ef45a6b938e75dffdd667c3fe37fa723b5a",
     "hh-verify:ropsten": ". ./.env.local && npx hardhat run --network ropsten scripts/verifyContracts.js"
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.0.7"
   },
   "dependencies": {
     "@ensdomains/ens-contracts": "^0.0.4",

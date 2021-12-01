@@ -3,6 +3,7 @@ const deploy = require('./deploy');
 const { Wallet } = require('@ethersproject/wallet');
 const {deployENS, ENS} = require('@ethereum-waffle/ens');
 const namehash = require('eth-ens-namehash');
+const deployTestContracts = require('./deploy-test-contracts');
 
 // const wallet = new Wallet(process.env.FUNDS_COLLECTOR, provider);
 
@@ -23,6 +24,7 @@ const setup = async function() {
 
     // Deploy contracts
     const { well, fresh, crowdsale, nft, registrar, resolver } = await deploy(fundsCollector, registry.address, domain, baseURI);
+    const { weth9 } = await deployTestContracts();
 
     // Set registrar as owner of registry
     await registry.connect(accounts[0]).setOwner(domainNode, registrar.address);
