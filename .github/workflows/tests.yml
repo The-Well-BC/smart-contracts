@@ -6,9 +6,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
-      MNEMONIC=${{ secrets.WALLET_MNEMONIC }}
-      FUNDS_COLLECTOR=${{ secrets.FUNDS_COLLECTOR_WALLET }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      MNEMONIC: ${{ secrets.WALLET_MNEMONIC }}
+      FUNDS_COLLECTOR: ${{ secrets.FUNDS_COLLECTOR_WALLET }}
 
     steps:
       - uses: actions/checkout@v2
