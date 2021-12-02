@@ -23,6 +23,11 @@ jobs:
         with:
           node-version: '14.x'
       - run: |
-          npm install -g truffle
           npm install
-      - run: npm run test:contracts
+          touch .env.local
+      - run: npm run test
+      - uses: actions/upload-artifact@v2  # upload test results
+        if: success() || failure()        # run this step even if previous step failed
+        with:
+          name: test-results
+          path: *.xml
