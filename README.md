@@ -1,5 +1,6 @@
 # Smart contracts for TheWell
 ## Contracts
+[![Tests](https://github.com/The-Well-BC/smart-contracts/actions/workflows/tests.yml/badge.svg)](https://github.com/The-Well-BC/smart-contracts/actions/workflows/tests.yml)
 
 * Note: Make sure you create a .env.local file to use when deploying contracts onto the testnets. Open the .env.local.sample file and use that to create your .env.local file.
 
