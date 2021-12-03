@@ -26,7 +26,8 @@ jobs:
           npm install
           touch .env.local
       - run: npm run test -- --reporter json --reporter-option output=test-results.json,
-      - uses: actions/upload-artifact@v2  # upload test results
+      - name: Generate test report
+        uses: actions/upload-artifact@v2  # upload test results
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: test-results
