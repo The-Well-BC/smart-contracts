@@ -5,6 +5,7 @@
 require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
+console.log(process.env.REPORT_GAS)
 require("hardhat-gas-reporter");
 
 // Tasks
@@ -51,9 +52,6 @@ module.exports = {
     gasReporter: {
         currency: 'CHF',
         gasPrice: 21
-    },
-    mocha: {
-        reporter: 'json > test-results.json'
     },
     settings: {
         optimizer: {

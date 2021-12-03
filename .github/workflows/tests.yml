@@ -9,7 +9,7 @@ jobs:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
       MNEMONIC: ${{ secrets.WALLET_MNEMONIC }}
       FUNDS_COLLECTOR: ${{ secrets.FUNDS_COLLECTOR_WALLET }}
-
+      INFURA_API_KEY: 'not0needed0here'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -22,13 +22,13 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: '14.x'
+          npm-version: '8.x'
       - run: |
           npm install
           touch .env.local
-      - run: npm run test
+      - run: npm run test --reporter json -- --reporter-option output=test-results.json,
       - uses: actions/upload-artifact@v2  # upload test results
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: test-results
-          path: '*.xml'
-          reporter: mocha-json
+          path: 'test-results.json'

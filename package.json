@@ -7,7 +7,7 @@
     "dev:console": ". ./.env.local && npx hardhat console",
     "clean": ". ./.env.local && npx hardhat clean",
     "help": ". ./.env.local && npx hardhat help",
-    "test": ". ./.env.local && hardhat test",
+    "test": ". ./.env.local && mocha --require hardhat/register",
     "test:watch": ". ./.env.local && nodemon -e js,sol --exec 'npm run test'",
     "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
     "deploy": ". ./.env.local && npx hardhat deploy",
