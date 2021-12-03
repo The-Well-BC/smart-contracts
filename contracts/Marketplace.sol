@@ -473,7 +473,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
         uint256 creatorShare = splitShare(bidShares.creators, newAmount);
 
-        address payable pContract = payable(TheWellNFT(TheWellNFTContract).getPaymentsContract());
+        address payable pContract = payable(TheWellNFT(TheWellNFTContract).paymentsContract());
 
         IPayments paymentContract = IPayments( pContract );
 
