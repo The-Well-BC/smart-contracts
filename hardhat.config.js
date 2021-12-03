@@ -32,15 +32,12 @@ module.exports = {
             accounts: [ `0x${ process.env.PRIVATE_KEY }` ],
             chainId: 3,
             networkCheckTimeout: 100000,
-            // gas: 8000000,
-            // gasPrice: 100000000000
         },
         mainnet: {
             url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
             accounts: [ `0x${ process.env.PRIVATE_KEY }` ],
             chainId: 1,
             networkCheckTimeout: 100000,
-            // gas: 8000000,
         }
     },
     etherscan: {
@@ -54,6 +51,9 @@ module.exports = {
     gasReporter: {
         currency: 'CHF',
         gasPrice: 21
+    },
+    mocha: {
+        reporter: 'json > test-results.json'
     },
     settings: {
         optimizer: {
@@ -71,7 +71,7 @@ module.exports = {
                 }
             },
         }, {
-            version: "0.4.18"
+            version: "0.4.20"
         }]
     }
 };
