@@ -31,3 +31,4 @@ jobs:
         with:
           name: test-results
           path: 'test-results.json'
+          reporter: mocha-json
