@@ -22,7 +22,6 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: '14.x'
-          npm-version: '8.x'
       - run: |
           npm install
           touch .env.local
