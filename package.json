@@ -9,7 +9,6 @@
     "help": ". ./.env.local && npx hardhat help",
     "test": ". ./.env.local && mocha --require hardhat/register",
     "test:watch": ". ./.env.local && nodemon -e js,sol --exec 'npm run test'",
-    "test:contracts": "nodemon -e js,sol --exec 'truffle test --network test --show-events'",
     "deploy": ". ./.env.local && npx hardhat deploy",
     "verify": ". ./.env.local && npx hardhat verify",
     "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ @ensdomains/=$(pwd)/node_modules/@ensdomains/ --abi contracts/*.sol contracts/TestContracts/weth-sample.sol -o abis --overwrite",

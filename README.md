@@ -7,11 +7,16 @@
 `npm run ropsten:migrate` deploys the contracts to the Ropsten testnet network.
 
 ## Testing
-- If you have ganache-cli installed, run `npm run test-chain` in one terminal window.
-- Open another terminal and run `npm run test:contracts`
+- Run `npm run test` in your terminal.
 
-### Testing in Browser
-- Run `npm run dev-chain` in a terminal window to start the development blockchain.
-- Then run `truffle migrate` to migrate the contracts onto the development blockchain.
+## Deploying on local blockchain
+You need [ganache-cli](https://github.com/trufflesuite/ganache-cli) installed.
 
-- Add the local blockchain (chain id = 1337, http://127.0.0.1:8545)
+Run the following in a terminal window.
+```
+ganache-cli --defaultBalanceEther -h 0.0.0.0 -i 1337
+```
+followed by
+```
+npm run dev
+```
