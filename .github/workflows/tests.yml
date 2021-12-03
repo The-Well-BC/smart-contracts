@@ -30,4 +30,5 @@ jobs:
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: test-results
-          path: *.xml
+          path: '*.xml'
+          reporter: mocha-json
