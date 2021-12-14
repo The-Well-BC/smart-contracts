@@ -4,6 +4,7 @@ const nftDeploy = require('./nft');
 const crowdsaleDeploy = require('./crowdsale');
 const tokenDeploy = require('./tokens');
 const registrarDeploy = require('./registrar');
+const miscDeploys = require('./misc');
 
 function checkParameters() {
     return Object.values(arguments).every(arg => {
@@ -45,6 +46,7 @@ module.exports = async function start(fundsCollectorAddress, registryAddress, do
     await fresh.grantMinterRole(crowdsale.address);
 
     const { nft, marketplace } = await nftDeploy(baseURI);
+    const misc = await miscDeploys();
 
     // Payment Splitter contract
     const PaymentSplitter = await hh.ethers.getContractFactory('TheWellPaymentSplitter');
@@ -52,5 +54,5 @@ module.exports = async function start(fundsCollectorAddress, registryAddress, do
     paymentSplitter.setNFTContract(nft.address);
     nft.setPaymentContract(paymentSplitter.address);
 
-    return { well, fresh, crowdsale, nft, marketplace, registrar, resolver, paymentSplitter };
+    return { well, fresh, crowdsale, nft, marketplace, registrar, resolver, paymentSplitter, ...misc };
 }

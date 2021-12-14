@@ -5,7 +5,7 @@ chai.use(
 const { expect } = chai;
 const faker = require('faker');
 
-describe.only('Update subgraph', function() {
+describe('Update subgraph', function() {
     let subgraphUpdater;
 
     before(async() => {

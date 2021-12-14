@@ -1,6 +1,9 @@
+function deployNFT() {
+}
+
 task('deploy', 'Deploy a contract')
     .addParam('contract', 'The contract name')
-    .addParam('baseuri', 'Base URI for NFT tokens')
+    .addOptionalParam('baseuri', 'Base URI for NFT tokens')
     .setAction(async (taskArgs) => {
         const { ethers } = hre;
         const signers = await ethers.getSigners();
@@ -21,10 +24,15 @@ task('deploy', 'Deploy a contract')
             console.log('TheWell Marketplace contract deployed at', marketplace.address);
 
         } else if( /treasury/i.test(contract)) {
-            const Treasury = await hh.ethers.getContractFactory('TheWellTreasury');
+            const Treasury = await ethers.getContractFactory('TheWellTreasury');
             const treasury = await Treasury.deploy();
             console.log('TheWell Treasury contract deployed at', treasury.address);
-        }
+        } else if( /subgraphUpdate/i.test(contract)) {
+            const SubgraphUpdater = await ethers.getContractFactory('SubgraphUpdater');
+            const subgraphUpdater = await SubgraphUpdater.deploy();
+            console.log('SubgraphUpdater contract deployed at:', subgraphUpdater.address);
+        } else
+            console.log('Contract:', contract, 'not found!');
     });
 
 
