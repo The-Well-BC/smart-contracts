@@ -214,6 +214,16 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         super._approve(to, tokenId);
     }
 
+    /**
+      * @dev Block setApprovalForAll if "operator" is not an allowed marketplace contracts
+     */
+    function setApprovalForAll(address operator, bool approved) public virtual override {
+        require(operator != address(0), "WellNFT: approve to zero address");
+        require(operator == address(wellMarketplace) || approvedMarketplaces[operator] >= 1);
+
+        super.setApprovalForAll(operator, approved);
+    }
+
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
         return tokens[tokenId_].releaseTime <= block.timestamp;
     }

@@ -4,7 +4,7 @@ const faker = require('faker');
 
 const deploy = require('./deploy');
 
-describe('Test: Block transfer/approval of nft to non-allowed contracts', function() {
+describe('Test: transfer/approval of nft to non-allowed contracts', function() {
     let approvedMarketplaceContracts = [], disallowedContract, nft, marketplace,
         token, accounts, tokenOwner, buyer;
 
@@ -30,11 +30,11 @@ describe('Test: Block transfer/approval of nft to non-allowed contracts', functi
 
     beforeEach(async() => {
         return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], faker.datatype.string(), 'Qm1metadata')
-        .then(tx => tx.wait())
-        .then(tx => {
-            tokenID = tx.events.filter(log => log.event == 'Transfer')[0].args.tokenId;
-            tokenID = tokenID.toString();
-        });
+            .then(tx => tx.wait())
+            .then(tx => {
+                tokenID = tx.events.filter(log => log.event == 'Transfer')[0].args.tokenId;
+                tokenID = tokenID.toString();
+            });
     });
 
     it('Allow nft transfer to eoa address', function() {
@@ -63,6 +63,19 @@ describe('Test: Block transfer/approval of nft to non-allowed contracts', functi
                             && log.args.approved == marketplace.address;
                     });
                 });
+            })
+    });
+
+    it('Allow user call setApprovalForAll with operator = WELL marketplace contract', async function() {
+        return nft.connect(tokenOwner).setApprovalForAll(marketplace.address, tokenID)
+            .then(tx => tx.wait())
+            .then(res => {
+                expect(res.events).to.satisfy(logs => {
+                    return logs.some(log => {
+                        return log.event == 'ApprovalForAll'
+                            && log.args.operator == marketplace.address;
+                    });
+                });
             });
     });
 
@@ -81,9 +94,36 @@ describe('Test: Block transfer/approval of nft to non-allowed contracts', functi
         }));
     });
 
+    it('Allow user call setApprovalForAll on token with operator = approved marketplace contract', async function() {
+        return Promise.all(approvedMarketplaceContracts.map( contract => {
+            return nft.connect(tokenOwner).setApprovalForAll(contract.address, tokenID)
+                .then(tx => tx.wait())
+                .then(res => {
+                    expect(res.events).to.satisfy(logs => {
+                        return logs.some(log => {
+                            return log.event == 'ApprovalForAll'
+                                && log.args.operator == contract.address;
+                        });
+                    });
+                });
+        }));
+    });
+
     it('Don\'t allow user "approve" token to be used by non-approved marketplace contract', async function() {
         return expect(
             nft.connect(tokenOwner).approve(disallowedContract.address, tokenID)
-        ).to.be.reverted;
+        ).to.be.reverted
+            .then(() =>
+                expect( disallowedContract.connect(tokenOwner).sellNFT(tokenOwner.address, disallowedContract.address, tokenID)).to.be.reverted
+            );
+    });
+
+    it('Don\'t allow user call "setApprovalForAll" for non-approved marketplace contract', async function() {
+        return expect(
+            nft.connect(tokenOwner).setApprovalForAll(disallowedContract.address, tokenID)
+        ).to.be.reverted
+            .then(() =>
+                expect( disallowedContract.connect(tokenOwner).sellNFT(tokenOwner.address, disallowedContract.address, tokenID)).to.be.reverted
+        );
     });
 });
