@@ -1,12 +1,11 @@
 const chai = require('chai');
 const { expect } = chai;
+const faker = require('faker');
 
 const {
   expectEvent,  // Assertions for emitted events
   expectRevert, // Assertions for transactions that should fail
 } = require('@openzeppelin/test-helpers');
-
-const faker = require('faker');
 
 const deploy = require('./deploy');
 
@@ -24,7 +23,7 @@ describe('Mint NFT', function () {
         collaborators = [ accounts[3], accounts[4], accounts[5]].map(c => c.address);
     });
 
-    it('Check default NFT URI', () => {
+    it('Check NFT URI', () => {
         const artistWallet = artists[0], artist = artists[0].address;
         let tokenID, metadataURI = faker.datatype.string();
 
@@ -37,6 +36,38 @@ describe('Mint NFT', function () {
             return theWellNFT.tokenURI(tokenID)
         }).then(uri => {
             expect(uri).to.equal(baseURI + metadataURI);
+        });
+    });
+
+    it('Check NFT metadata and media hash', () => {
+        const artistWallet = artists[0], artist = artists[0].address;
+        let tokenID, metadataHash = faker.datatype.string(), mediaHash = 'Qm' + faker.git.commitSha();
+
+        return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], mediaHash, metadataHash)
+        .then(res => res.wait())
+        .then(res => {
+            tokenID = res.events.filter(log => log.event == 'Transfer')[0]
+                           .args.tokenId.toString();
+            // Check token URI
+            return theWellNFT.metadataHash(tokenID)
+        }).then(uri => {
+            expect(uri).to.equal(metadataHash);
+        });
+    });
+
+    it('Check NFT media hash', () => {
+        const artistWallet = artists[0], artist = artists[0].address;
+        let tokenID, mediaHash = 'Qm' + faker.git.commitSha();
+
+        return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], mediaHash, faker.datatype.string())
+        .then(res => res.wait())
+        .then(res => {
+            tokenID = res.events.filter(log => log.event == 'Transfer')[0]
+                           .args.tokenId.toString();
+            // Check token URI
+            return theWellNFT.mediaHash(tokenID)
+        }).then(uri => {
+            expect(uri).to.equal(mediaHash);
         });
     });
 

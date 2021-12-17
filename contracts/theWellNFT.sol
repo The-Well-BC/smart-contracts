@@ -28,7 +28,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         uint48 releaseTime; // optional. Minter can set the time period a buyer has to hold this NFT for.
         mapping(address => uint256) creatorShares; // mapping of token creators to their share percentages
         string mediaHash; // media URI
-        string metadataURI; // metadata URI
+        string metadataHash; // metadata URI
     }
 
     // Reverse mapping for token mediaHashes
@@ -132,7 +132,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         address[] calldata collaborators_,
         uint256[] calldata collaboratorRewards_,
         string calldata mediaHash_,
-        string calldata metadataURI_
+        string calldata metadataHash_
     ) external nonReentrant {
         require(nextTokenTracker <= 4294967295);
 
@@ -144,7 +144,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         token_.creators.push(msg.sender);
         token_.minter = msg.sender;
         token_.mediaHash = mediaHash_;
-        token_.metadataURI = metadataURI_;
+        token_.metadataHash = metadataHash_;
 
         setSplits(
             tokenId,
@@ -160,6 +160,18 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         nextTokenTracker++;
     }
 
+    function mediaHash(uint256 tokenId) external view returns (string memory) {
+        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+
+        return tokens[tokenId].mediaHash;
+    }
+
+    function metadataHash(uint256 tokenId) external view returns (string memory) {
+        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+
+        return tokens[tokenId].metadataHash;
+    }
+
     /**
      * @dev See {IERC721Metadata-tokenURI}.
      * Returns metadata uri for token tokenId
@@ -167,7 +179,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
 
-        string memory tokenMetadataURI_ = tokens[tokenId].metadataURI;
+        string memory tokenMetadataURI_ = tokens[tokenId].metadataHash;
         string memory base = _baseURI();
 
         // If there is no base URI, return the token URI.
@@ -205,7 +217,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     }
 
     /**
-      * @dev Block "approve" method where "to" is not in the list of allowed marketplace contracts
+      * @dev Block "approve" method where "to" is not in the list of allowed marketplace contract
       */
     function _approve(address to, uint256 tokenId) internal override {
         if( to != address(0))
@@ -215,7 +227,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     }
 
     /**
-      * @dev Block setApprovalForAll if "operator" is not an allowed marketplace contracts
+      * @dev Block setApprovalForAll if "operator" is not an allowed marketplace contract
      */
     function setApprovalForAll(address operator, bool approved) public virtual override {
         require(operator != address(0), "WellNFT: approve to zero address");

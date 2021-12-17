@@ -37,7 +37,23 @@ describe('Test: transfer/approval of nft to non-allowed contracts', function() {
             });
     });
 
-    it('Allow nft transfer to eoa address', function() {
+    it('Allow safeTransferFrom to eoa address', function() {
+        return nft.connect(tokenOwner)['safeTransferFrom(address,address,uint256)'](tokenOwner.address, buyer.address, tokenID)
+            .then(tx => tx.wait())
+            .then(res => {
+                expect(res.events).to.satisfy(logs => {
+                    return logs.some(log => {
+                        return log.event == 'Transfer'
+                    });
+                });
+
+                return expect(
+                    nft.connect(buyer).ownerOf(tokenID)
+                ).to.eventually.equal(buyer.address);
+            });
+    });
+
+    it('Allow transferFrom to eoa address', function() {
         return nft.connect(tokenOwner).transferFrom(tokenOwner.address, buyer.address, tokenID)
             .then(tx => tx.wait())
             .then(res => {
@@ -124,6 +140,6 @@ describe('Test: transfer/approval of nft to non-allowed contracts', function() {
         ).to.be.reverted
             .then(() =>
                 expect( disallowedContract.connect(tokenOwner).sellNFT(tokenOwner.address, disallowedContract.address, tokenID)).to.be.reverted
-        );
+            );
     });
 });
