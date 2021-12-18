@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "npm run abi && . ./.env.local && npx hardhat run --network development scripts/local-deploy.js",
     "dev:console": ". ./.env.local && npx hardhat console",
+    "lint": "eslint -c ./.eslintrc.js",
     "clean": ". ./.env.local && npx hardhat clean",
     "help": ". ./.env.local && npx hardhat help",
     "compile": ". ./.env.local && npx hardhat compile",
@@ -39,6 +40,7 @@
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^3.0.0",
     "chai-things": "^0.2.0",
+    "eslint": "^8.4.1",
     "eth-ens-namehash": "^2.0.8",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.3",
