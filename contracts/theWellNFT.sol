@@ -5,12 +5,13 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import './Admin.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import './IWellNFT.sol';
 
-contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
+contract TheWellNFT is IWellNFT, ERC721, ReentrancyGuard, WellAdmin {
     string uriTemplate;
 
     /* The Well Marketplace contract address */
-    address wellMarketplace;
+    address public wellMarketplace;
 
     /* Other approved marketplace contracts */
     address[] approvedMarketplaceArray;
@@ -19,6 +20,8 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     /* Payments handler contract */
     address paymentsContract;
 
+    /* Token ID of first token in this contract */
+    uint256 firstTokenID;
     /* Used to set the tokenID of newly minted tokens */
     uint256 nextTokenTracker;
 
@@ -37,35 +40,42 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     /* Mapping from token ID to Token */
     mapping(uint256 => Token) tokens;
 
+    IWellNFT oldWellNFT;
+
     constructor(
         string memory name_,
         string memory symbol_,
-        string memory tokenURITemplate
+        string memory tokenURITemplate,
+        address oldNftAddress_,
+        uint256 startTokensFrom
     ) ERC721(name_, symbol_) {
+        oldWellNFT = IWellNFT(oldNftAddress_);
+        nextTokenTracker = startTokensFrom;
+        firstTokenID = startTokensFrom;
+
         setBaseURI(tokenURITemplate);
-        nextTokenTracker = 1;
     }
 
     /** @dev Checks if caller is the artist/minter */
-    function isMinter(uint256 tokenId, address caller_) public view returns(bool) {
+    function isMinter(uint256 tokenId, address caller_) public view override returns(bool) {
         return (caller_ == tokens[tokenId].minter);
     }
 
-    function checkTokenExists(uint256 tokenID) external view returns(bool) {
+    function checkTokenExists(uint256 tokenID) external view override returns(bool) {
         return _exists(tokenID);
     }
 
     /**
       * @notice Sets the default WellNFT marketplace.
       */
-    function setMarketplaceContract(address _marketplaceContract) external isAdmin() {
+    function setMarketplaceContract(address _marketplaceContract) external override isAdmin() {
         wellMarketplace = _marketplaceContract;
     }
 
     /**
       * @notice adds marketplace contracts that are allowed to trade Well NFTs
       */
-    function addApprovedMarketplace(address _otherMarketplace) external isAdmin() {
+    function addApprovedMarketplace(address _otherMarketplace) external override isAdmin() {
         approvedMarketplaces[_otherMarketplace] = approvedMarketplaceArray.length + 1;
         approvedMarketplaceArray.push(_otherMarketplace);
     }
@@ -73,24 +83,24 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
     /**
       * @notice adds marketplace contracts that are allowed to trade Well NFTs
       */
-    function removeApprovedMarketplace(address _otherMarketplace) external isAdmin() {
+    function removeApprovedMarketplace(address _otherMarketplace) external override isAdmin() {
         delete approvedMarketplaces[_otherMarketplace];
         uint index_ = approvedMarketplaces[_otherMarketplace] - 1;
         delete approvedMarketplaceArray[index_];
     }
 
-    function getApprovedMarketplaces() external view returns(address[] memory) {
+    function getApprovedMarketplaces() external view override returns(address[] memory) {
         return approvedMarketplaceArray;
     }
 
-    function setPaymentContract(address _paymentContract) external isAdmin() {
+    function setPaymentContract(address _paymentContract) external override isAdmin() {
         paymentsContract = _paymentContract;
     }
-    function getPaymentsContract() external view returns(address paymentContract) {
+    function getPaymentsContract() external view override returns(address paymentContract) {
         return paymentsContract;
     }
 
-    function setBaseURI(string memory uriTemplate_) public isAdmin() {
+    function setBaseURI(string memory uriTemplate_) public override isAdmin() {
         uriTemplate = uriTemplate_;
     }
 
@@ -133,7 +143,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         uint256[] calldata collaboratorRewards_,
         string calldata mediaHash_,
         string calldata metadataHash_
-    ) external nonReentrant {
+    ) external override nonReentrant {
         require(nextTokenTracker <= 4294967295);
 
         require(mediaHashes[mediaHash_] == false, 'A token has already been minted with this media');
@@ -176,44 +186,52 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
      * @dev See {IERC721Metadata-tokenURI}.
      * Returns metadata uri for token tokenId
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+    function tokenURI(uint256 tokenId) public view virtual override(IWellNFT,ERC721) returns (string memory) {
+        if(tokenId < firstTokenID && tokenId != 0) {
+            return oldWellNFT.tokenURI(tokenId);
+        } else {
+            require(_exists(tokenId) != false, "ERC721URIStorage: URI query for nonexistent token");
 
-        string memory tokenMetadataURI_ = tokens[tokenId].metadataHash;
-        string memory base = _baseURI();
+            string memory tokenMetadataURI_ = tokens[tokenId].metadataHash;
+            string memory base = _baseURI();
 
-        // If there is no base URI, return the token URI.
-        if (bytes(base).length == 0) {
-            return tokenMetadataURI_;
+            // If there is no base URI, return the token URI.
+            if (bytes(base).length == 0) {
+                return tokenMetadataURI_;
+            }
+            // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+            if (bytes(tokenMetadataURI_).length > 0) {
+                return string(abi.encodePacked(base, tokenMetadataURI_));
+            }
+
+            return super.tokenURI(tokenId);
         }
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(tokenMetadataURI_).length > 0) {
-            return string(abi.encodePacked(base, tokenMetadataURI_));
-        }
-
-        return super.tokenURI(tokenId);
     }
 
     /**
       * Returns media uri for token
       */
-    function tokenMediaURI(uint256 tokenId) public view virtual returns (string memory) {
-        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+    function tokenMediaURI(uint256 tokenId) public view virtual override returns (string memory) {
+        if(tokenId < firstTokenID && tokenId != 0) {
+            return oldWellNFT.tokenMediaURI(tokenId);
+        } else {
+            require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
 
-        string memory tokenMediaURI_ = tokens[tokenId].mediaHash;
-        string memory base = _baseURI();
+            string memory tokenMediaURI_ = tokens[tokenId].mediaHash;
+            string memory base = _baseURI();
 
-        // If there is no base URI, return the token URI.
-        if (bytes(base).length == 0) {
-            return tokenMediaURI_;
+            // If there is no base URI, return the token URI.
+            if (bytes(base).length == 0) {
+                return tokenMediaURI_;
+            }
+
+            // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+            if (bytes(tokenMediaURI_).length > 0) {
+                return string(abi.encodePacked(base, tokenMediaURI_));
+            }
+
+            return super.tokenURI(tokenId);
         }
-
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(tokenMediaURI_).length > 0) {
-            return string(abi.encodePacked(base, tokenMediaURI_));
-        }
-
-        return super.tokenURI(tokenId);
     }
 
     /**
@@ -236,7 +254,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         super.setApprovalForAll(operator, approved);
     }
 
-    function lockupPeriodOver(uint256 tokenId_) external view returns(bool) {
+    function lockupPeriodOver(uint256 tokenId_) external view override returns(bool) {
         return tokens[tokenId_].releaseTime <= block.timestamp;
     }
 
@@ -244,7 +262,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
      * Returns addresses of creators of token.
      * @param tokenId_ ID of token
      */
-    function tokenCreators(uint256 tokenId_) external view returns (address[] memory) {
+    function tokenCreators(uint256 tokenId_) external view override returns (address[] memory) {
         return tokens[tokenId_].creators;
     }
 
@@ -253,13 +271,13 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
      * @param tokenId_ ID of token
      * @param creator_ address of creator
      */
-    function creatorShare(uint256 tokenId_, address creator_) external view returns (uint256) {
+    function creatorShare(uint256 tokenId_, address creator_) external override view returns (uint256) {
         return tokens[tokenId_].creatorShares[creator_];
     }
 
     // this function aims to mimic a lock up for the token, where transfers are barred for a period of time after minting
     function setReleaseTime(uint256 tokenID, uint256 _time)
-        external nonReentrant
+        external override nonReentrant
     {
         require(_exists(tokenID));
         require(isMinter(tokenID, msg.sender));
@@ -268,7 +286,7 @@ contract TheWellNFT is ERC721, ReentrancyGuard, WellAdmin {
         tokens[tokenID].releaseTime = uint48(releaseTime);
     }
 
-    function getTokenReleaseTime(uint256 tokenID) external view returns (uint256) {
+    function getTokenReleaseTime(uint256 tokenID) external view override returns (uint256) {
         return tokens[tokenID].releaseTime;
     }
 }
