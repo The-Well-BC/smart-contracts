@@ -1,3 +1,5 @@
+const { ethers } = require('hardhat');
+
 module.exports = async function(fundsCollector) {
     const CollectorCrowdsale = await ethers.getContractFactory('CollectorCrowdsale');
 

@@ -1,4 +1,5 @@
 const namehash = require('eth-ens-namehash');
+const { ethers } = require('hardhat');
 
 module.exports = async(well, registry, domain) => {
     const domainNode = namehash.hash(domain);

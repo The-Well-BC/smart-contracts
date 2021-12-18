@@ -14,6 +14,8 @@
     "test:gas": ". ./.env.local && npx hardhat compile && npx hardhat test",
     "test:watch": ". ./.env.local && nodemon -e js,sol --exec 'npm run test'",
     "deploy": ". ./.env.local && npx hardhat deploy",
+    "deploy-local": ". ./.env.local && npx hardhat deploy-local --network development",
+    "local-deploy": "npm run deploy-local",
     "verify": ". ./.env.local && npx hardhat verify",
     "abi": "solc @openzeppelin/=$(pwd)/node_modules/@openzeppelin/ @ensdomains/=$(pwd)/node_modules/@ensdomains/ --abi contracts/*.sol contracts/TestContracts/weth-sample.sol -o abis --overwrite",
     "ropsten:migrate": "npm run ropsten-deploy",

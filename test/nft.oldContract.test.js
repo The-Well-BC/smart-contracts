@@ -3,7 +3,7 @@ const { expect } = chai;
 
 const faker = require('faker');
 
-const nftDeploy = require('../scripts/nft');
+const nftDeploy = require('../deployScripts/nft');
 const { ethers } = require('hardhat');
 
 describe('Interfacing with older nft contract', function () {
@@ -18,23 +18,23 @@ describe('Interfacing with older nft contract', function () {
     });
 
     it('Mint nft should start token id from the tokenid set on creation', async function() {
-        const startTokenID = faker.datatype.number({max: 10}).toString();
+        const startTokenFrom = faker.datatype.number({max: 10}).toString();
 
-        const { nft } = await nftDeploy(baseURI, accounts[4].address, startTokenID);
+        const nft = await nftDeploy({baseURI, oldNFTContract:accounts[4].address, startTokenFrom});
 
         return nft.connect(tokenOwner).mint(65, [accounts[5].address], [35], faker.datatype.string(), 'Qm1metadata')
             .then(tx => tx.wait())
             .then(tx => {
                 let tokenID = tx.events.filter(log => log.event == 'Transfer')[0].args.tokenId;
                 tokenID = tokenID.toString();
-                expect(tokenID).to.equal(startTokenID);
+                expect(tokenID).to.equal(startTokenFrom);
             });
     });
 
     it('Mint nft should increment token id by 1', async function() {
         const startTokenID = faker.datatype.number({max: 10});
 
-        const { nft } = await nftDeploy(baseURI, accounts[4].address, startTokenID);
+        const nft = await nftDeploy({baseURI, oldNFTContract:accounts[4].address, startTokenFrom: startTokenID});
 
         return Promise.all(
             Array(10).fill(0).map((x, i) => {
@@ -46,18 +46,17 @@ describe('Interfacing with older nft contract', function () {
                         expect(parseInt(tokenID)).to.equal( startTokenID + i );
                     });
             })
-        ).then(() => {
-        });
+        )
     });
 
     it('Calling tokenURI on new contract should return token data from old contract', async function() {
-        const startTokenID = faker.datatype.number({min:1, max:10});
+        const startTokenID = faker.datatype.number({min:2, max:10});
         const tokenID = faker.datatype.number({ min:1, max:startTokenID });
 
         const metadataHash = 'Qm' + faker.git.commitSha(), mediaHash = 'Qm' + faker.git.commitSha();
 
-        const { nft:nft1 } = await nftDeploy(baseURI, null, 1);
-        const { nft:nft2 } = await nftDeploy(baseURI, nft1.address, startTokenID + 1);
+        const nft1 = await nftDeploy({baseURI, oldNFTContract:accounts[4].address, startTokenFrom:1});
+        const nft2 = await nftDeploy({baseURI, oldNFTContract:nft1.address, startTokenFrom: startTokenID + 1});
 
         return Promise.all(
             Array(startTokenID).fill(0).map((x, i) => {
