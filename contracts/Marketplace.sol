@@ -45,7 +45,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     mapping(address => bool) public _validPurchaseToken;
 
     // address that can call admin functions
-    address private _owner;
+    address private _admin;
 
     // Mapping from tokenID to mapping from bidder to bid
     mapping(uint256 => mapping(address => Bid)) private _tokenBidders;
@@ -75,7 +75,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
      */
 
     constructor(address OWNER, address payable TheWellTreasury_) {
-        _owner = OWNER;
+        _admin = OWNER;
         _TheWellTreasury = TheWellTreasury_;
         ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     }
@@ -99,7 +99,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
     function addPurchaseToken(address purchaseToken_) public {
         require(
-            msg.sender == _owner,
+            msg.sender == _admin,
             "Permission denied; CALLER ADDRESS NOT OWNER"
         );
         _validPurchaseToken[purchaseToken_] = true;
@@ -107,7 +107,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
 
     function removePurchaseToken(address purchaseToken_) public {
         require(
-            msg.sender == _owner,
+            msg.sender == _admin,
             "Permission denied; CALLER ADDRESS NOT OWNER"
         );
 
@@ -119,7 +119,7 @@ contract TheWellMarketplace is IMarket, ReentrancyGuard{
     }
 
     function configure(address payable theWellNFTContract) external override {
-        require(msg.sender == _owner, "Market: Only owner");
+        require(msg.sender == _admin, "Market: Only owner");
         require(TheWellNFTContract == address(0), "Market: Already configured");
         require(
             theWellNFTContract != address(0),
