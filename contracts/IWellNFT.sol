@@ -10,18 +10,18 @@ interface IWellNFT {
     function checkTokenExists(uint256 tokenID) external view returns(bool);
 
     /**
-      * @notice Sets the default WellNFT marketplace.
-      */
+     * @notice Sets the default WellNFT marketplace.
+     */
     function setMarketplaceContract(address _marketplaceContract) external;
 
     /**
-      * @notice adds marketplace contracts that are allowed to trade Well NFTs
-      */
+     * @notice adds marketplace contracts that are allowed to trade Well NFTs
+     */
     function addApprovedMarketplace(address _otherMarketplace) external;
 
     /**
-      * @notice adds marketplace contracts that are allowed to trade Well NFTs
-      */
+     * @notice adds marketplace contracts that are allowed to trade Well NFTs
+     */
     function removeApprovedMarketplace(address _otherMarketplace) external;
 
     function getApprovedMarketplaces() external view returns(address[] memory);
@@ -33,13 +33,13 @@ interface IWellNFT {
     function setBaseURI(string memory uriTemplate_) external;
 
     /**
-      * @dev Mint function. Creates a new ERC721 token. _artist refers to the address minting the token
-      * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
-      * Will also set the token URI
-      * @param _artistCut Percentage of sales the minter gets.
-      * @param collaborators_ Array of other collaborators that contributed to the art.
-      * @param collaboratorRewards_ Array of percentage of sale that each collaborator gets.
-      */
+     * @dev Mint function. Creates a new ERC721 token. _artist refers to the address minting the token
+     * Will set the token id using nextTokenTracker and iterate nextTokenTracker.
+     * Will also set the token URI
+     * @param _artistCut Percentage of sales the minter gets.
+     * @param collaborators_ Array of other collaborators that contributed to the art.
+     * @param collaboratorRewards_ Array of percentage of sale that each collaborator gets.
+     */
 
     function mint(
         uint8 _artistCut,
@@ -49,30 +49,29 @@ interface IWellNFT {
         string calldata metadataHash_
     ) external;
 
-    // function mediaHash(uint256 tokenId) external view returns (string memory);
-
-    // function metadataHash(uint256 tokenId) external view returns (string memory);
-
-    function tokenURI(uint256 tokenId) external view virtual returns (string memory);
+    /**
+     * Returns metadata uri for token tokenId
+     */
+    function tokenURI(uint256 tokenId) external view returns (string memory);
 
     /**
-      * Returns media uri for token
-      */
-    function tokenMediaURI(uint256 tokenId) external view virtual returns (string memory);
+    * Returns media uri for token
+    */
+    function tokenMediaURI(uint256 tokenId) external view returns (string memory);
 
     function lockupPeriodOver(uint256 tokenId_) external view returns(bool);
 
     /**
-     * Returns addresses of creators of token.
-     * @param tokenId_ ID of token
-     */
+    * Returns addresses of creators of token.
+    * @param tokenId_ ID of token
+    */
     function tokenCreators(uint256 tokenId_) external view returns (address[] memory);
 
     /**
-     * Returns creator share
-     * @param tokenId_ ID of token
-     * @param creator_ address of creator
-     */
+    * Returns creator share
+    * @param tokenId_ ID of token
+    * @param creator_ address of creator
+    */
     function creatorShare(uint256 tokenId_, address creator_) external view returns (uint256);
 
     // this function aims to mimic a lock up for the token, where transfers are barred for a period of time after minting
