@@ -3,12 +3,13 @@ const { expect } = chai;
 
 const { BN } = require('@openzeppelin/test-helpers');
 
-let fresh, well, unitFresh, unitWell;
+let unitFresh, unitWell;
 
 const deploy = require('./deploy');
+const { ethers } = require('hardhat');
 
 describe('Crowdsale: Buy tokens', function() {
-    let CrowdsaleContract;
+    let CollectorCrowdsale;
     // 1 $WELL = 25 ETH
     let packages = [{
         id: null, tokens: { well: 2 },
@@ -18,10 +19,7 @@ describe('Crowdsale: Buy tokens', function() {
         name: 'Multi token package', price: ethers.utils.parseEther('25')
     }];
 
-    let packageIDs = [];
-    const price = ethers.utils.parseEther('25');
-
-    let whitelistedBuyers, otherBuyers;
+    let accounts, otherBuyers, whitelistedBuyers, freshToken, wellToken;
 
     before(async function() {
         const deployed = await deploy();
@@ -33,7 +31,7 @@ describe('Crowdsale: Buy tokens', function() {
         accounts = await ethers.getSigners();
 
         whitelistedBuyers = [
-            accounts[4], accounts[5], accounts[6], accounts[7],
+            accounts[4], accounts[5], accounts[6], accounts[7]
         ];
         otherBuyers = [ accounts[3], accounts[8], accounts[9], ];
 
@@ -65,7 +63,6 @@ describe('Crowdsale: Buy tokens', function() {
             return Promise.all(whitelistedBuyers.map(buyer => {
                 crowdsale.addToWhitelist(buyer.address);
             }));
-            console.log('Packages:', packages);
         })
     });
 

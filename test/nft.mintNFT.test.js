@@ -2,17 +2,10 @@ const chai = require('chai');
 const { expect } = chai;
 const faker = require('faker');
 
-const {
-  expectEvent,  // Assertions for emitted events
-  expectRevert, // Assertions for transactions that should fail
-} = require('@openzeppelin/test-helpers');
-
 const deploy = require('./deploy');
 
 describe('Mint NFT', function () {
-    let name = "The Monalisa";
-
-    let theWellNFT, accounts, artists, collaborators;
+    let theWellNFT, accounts, artists;
     let baseURI = 'http://localhost:8002/ipfs/';
 
     before(async function() {
@@ -20,11 +13,10 @@ describe('Mint NFT', function () {
 
         // Array of artists. Each test should use a different artist so we have a clean slate
         artists = [accounts[0], accounts[1], accounts[2], accounts[7]];
-        collaborators = [ accounts[3], accounts[4], accounts[5]].map(c => c.address);
     });
 
     it('Check NFT URI', () => {
-        const artistWallet = artists[0], artist = artists[0].address;
+        const artistWallet = artists[0];
         let tokenID, metadataURI = faker.datatype.string();
 
         return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], 'asdkf', metadataURI)
@@ -40,7 +32,7 @@ describe('Mint NFT', function () {
     });
 
     it('Check NFT metadata and media hash', () => {
-        const artistWallet = artists[0], artist = artists[0].address;
+        const artistWallet = artists[0];
         let tokenID, metadataHash = faker.datatype.string(), mediaHash = 'Qm' + faker.git.commitSha();
 
         return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], mediaHash, metadataHash)
@@ -56,7 +48,7 @@ describe('Mint NFT', function () {
     });
 
     it('Check NFT media hash', () => {
-        const artistWallet = artists[0], artist = artists[0].address;
+        const artistWallet = artists[0];
         let tokenID, mediaHash = 'Qm' + faker.git.commitSha();
 
         return theWellNFT.connect(artistWallet).mint(65, [accounts[5].address], [35], mediaHash, faker.datatype.string())
@@ -163,11 +155,8 @@ describe('Mint NFT', function () {
             expect(bal.toString()).to.equal('1');
 
             // Check collaborator NFT balance
-        }).then(bal => {
-            return theWellNFT.balanceOf(artist)
-            expect(bal.toString(), 'Collaborator NFT balance should be zero')
-                .to.equal('0');
-        });
+            return theWellNFT.balanceOf(collaborator);
+        }).then(bal => expect(bal.toString(), 'Collaborator NFT balance should be zero').to.equal('0'));
     });
 
     it('Transfer Event should return artist nd collaborators, tokenURI and metadataURI', () => {

@@ -6,7 +6,7 @@ const faker = require('faker');
 const deploy = require('./deploy');
 
 describe('Mint NFT with Collaborators', function () {
-    let accounts, theWellNFT;
+    let accounts, baseURI, theWellNFT;
 
     before(async function() {
         ({accounts, baseURI, nft:theWellNFT } = await deploy());

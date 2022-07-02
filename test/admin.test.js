@@ -1,7 +1,9 @@
 const chai = require('chai');
+chai.use( require('chai-as-promised') );
 const { expect } = chai;
 
 const deploy = require('./deploy');
+const { ethers } = require('hardhat');
 let AdminTesterArtifact;
 
 async function newContract() {
@@ -105,7 +107,7 @@ describe('Admin', function () {
     describe('Testing votes with 2 or more SuperAdmins', function() {
         // Test for odd and even number of superAdmins
         let scenarios,
-            superAdmins, newAdmin, newSuperAdmin, removeAdmin;
+            newAdmin, newSuperAdmin, removeAdmin, removeSuperAdmin, newSuperAdmins_, superAdmins_;
 
         beforeEach(async () => {
             scenarios = [
@@ -154,22 +156,28 @@ describe('Admin', function () {
         });
 
         it('Should not be able to add existing superadmin', function() {
-            let superAdmin = deployer;
+            const superAdmin = deployer;
 
-            return Promise.all( scenarios.map(scenario => {
-                if(scenario.superAdmins.length < 5) {
-                    let voter = scenario.superAdmins[0];
-                    let {contract} = scenario;
+            return scenarios.map((scenario, index) => {
+                return (() => {
+                    console.log('index:', index);
+                    if(scenario.superAdmins.length < 5) {
+                        const voter = scenario.superAdmins[0],
+                            {contract} = scenario;
 
-                    return expect(
-                        contract.connect(voter).addSuperAdmin(superAdmin.address)
-                    ).to.be.reverted;
-
-                    return expect(
-                        contract.connect(superAdmin).superAdminTestFn()
-                    ).to.be.reverted;
-                }
-            }))
+                        return expect(
+                            contract.connect(voter).addSuperAdmin(superAdmin.address)
+                        ).to.be.revertedWith('Superadmin already exists')
+                            .then(res => {
+                                console.log('done', res);
+                                return expect(
+                                    contract.connect(superAdmin).superAdminTestFn()
+                                ).to.be.revertedWith('boom');
+                            });
+                    }
+                })()
+            }).reduce((promiseChain, currentTask) => {
+            });
         });
 
         it('Superadmins should need votes to set the admin', function() {

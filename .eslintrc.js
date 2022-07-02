@@ -25,6 +25,16 @@ module.exports = {
   overrides: [
     {
       files: [
+        'tasks/*.js',
+      ],
+      globals: {
+        task: 'readonly',
+        subtask: 'readonly',
+        hre: 'readonly'
+      }
+    },
+    {
+      files: [
         '**/tests/e2e/__*.js',
         '**/tests/integration/__*.js'
       ],

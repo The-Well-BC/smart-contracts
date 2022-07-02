@@ -4,9 +4,9 @@ const faker = require('faker');
 
 const deploy = require('./deploy');
 
-describe('Test: transfer/approval of nft to non-allowed contracts', function() {
+describe('Test: transfer and approval of nft to contracts', function() {
     let approvedMarketplaceContracts = [], disallowedContract, nft, marketplace,
-        token, accounts, tokenOwner, buyer;
+        tokenID, accounts, tokenOwner, buyer;
 
     before(async() => {
         const hh = require('hardhat');
@@ -23,6 +23,8 @@ describe('Test: transfer/approval of nft to non-allowed contracts', function() {
         await Promise.all(
             approvedMarketplaceContracts.map(contract => nft.addApprovedMarketplace(contract.address))
         );
+
+        await nft.setMarketplaceContract(marketplace.address);
 
         tokenOwner = accounts[9];
         buyer = accounts[3];
@@ -47,10 +49,8 @@ describe('Test: transfer/approval of nft to non-allowed contracts', function() {
                     });
                 });
 
-                return expect(
-                    nft.connect(buyer).ownerOf(tokenID)
-                ).to.eventually.equal(buyer.address);
-            });
+                return nft.connect(buyer).ownerOf(tokenID)
+            }).then(res => expect(res).to.equal(buyer.address));
     });
 
     it('Allow transferFrom to eoa address', function() {
@@ -62,11 +62,9 @@ describe('Test: transfer/approval of nft to non-allowed contracts', function() {
                         return log.event == 'Transfer'
                     });
                 });
-
-                return expect(
-                    nft.connect(buyer).ownerOf(tokenID)
-                ).to.eventually.equal(buyer.address);
-            });
+                return nft.connect(buyer).ownerOf(tokenID)
+            })
+            .then(res => expect(res).to.equal(buyer.address));
     });
 
     it('Allow user "approve" token to be used by WELL marketplace contract', async function() {
@@ -101,7 +99,7 @@ describe('Test: transfer/approval of nft to non-allowed contracts', function() {
                 .then(tx => tx.wait())
                 .then(res => {
                     expect(res.events).to.satisfy(logs => {
-                        return logs.some(log => {
+                        return logs.some(log => { 
                             return log.event == 'Approval'
                                 && log.args.approved == contract.address;
                         });

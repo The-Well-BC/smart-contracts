@@ -2,11 +2,12 @@ const hh = require('hardhat');
 
 module.exports = async function main(args) {
 
-    const {marketplace, oldNFTContract, tokenStartsFrom} = args;
+    const {marketplace} = args;
 
     const tokenStart = args.tokenStartsFrom || args.startTokenFrom || args.tokenStart || args.tokenStartID || 1;
 
     const baseURI = args.baseURI || args.baseuri || '';
+    const oldNFTContract = args.oldNFTContract || args.oldContract;
 
     if(!baseURI || !oldNFTContract)
         throw new Error('Missing parameter');

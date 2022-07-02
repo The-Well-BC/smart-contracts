@@ -1,16 +1,9 @@
 const chai = require('chai');
 
-const {
-  expectEvent,  // Assertions for emitted events
-  expectRevert, // Assertions for transactions that should fail
-} = require('@openzeppelin/test-helpers');
-
-
-const truffleAssert = require('truffle-assertions');
-
 const { expect } = chai;
 
 const deploy = require('./deploy');
+const { ethers } = require('hardhat');
 
 let unitFresh, unitWell, Well, Fresh,
     CollectorCrowdsale, accounts, tokenAmounts;

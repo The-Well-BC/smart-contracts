@@ -2,6 +2,7 @@ const chai = require('chai');
 const { expect } = chai;
 
 const deploy = require('./deploy');
+const { ethers } = require('hardhat');
 
 const namehash = require('eth-ens-namehash');
 
@@ -13,7 +14,7 @@ describe('Test subdomain registration', function() {
 
     before(async function() {
         const deployed = await deploy();
-        const { crowdsale, registry, registrar, resolver } = deployed;
+        const { registry, registrar, resolver } = deployed;
         ens = deployed.ens;
 
         Registry = registry, Registrar = registrar, Resolver = resolver,
@@ -37,7 +38,7 @@ describe('Test subdomain registration', function() {
 
     it('Register subdomain with empty string should revert', function() {
         // Init variables
-        let signer, balance, decimals, registerTx, subdomain = 'newuser';
+        let signer, balance, decimals, subdomain = 'newuser';
 
         before(async () => {
             signer = accounts[1];

@@ -75,7 +75,5 @@ describe('Interfacing with older nft contract', function () {
             .then(async() => expect( await nft2.tokenURI(tokenID) ).to.equal(baseURI + metadataHash))
             .then(async() => expect( await nft2.tokenMediaURI(tokenID) ).to.equal(baseURI + mediaHash))
             .then(() => expect( nft1.tokenMediaURI(105) ).to.be.revertedWith("ERC721URIStorage: URI query for nonexistent token"))
-        /*
-        */
     });
 })

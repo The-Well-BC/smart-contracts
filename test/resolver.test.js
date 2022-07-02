@@ -2,6 +2,7 @@ const chai = require('chai');
 const { expect } = chai;
 
 const deploy = require('./deploy');
+const { ethers } = require('hardhat');
 
 let Resolver, accounts;
 const namehash = require('eth-ens-namehash');

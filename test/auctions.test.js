@@ -1,19 +1,14 @@
 const chai = require('chai');
 const { expect } = chai;
 
-const {
-  expectEvent,  // Assertions for emitted events
-  expectRevert, // Assertions for transactions that should fail
-} = require('@openzeppelin/test-helpers');
-
 const { listNFTs, Bid } = require('./helpers');
 
 let marketplace, theWellNFT, goodToken, badToken;
-let tokenID, tokenPrice = '30000000'; creatorPercentage = 50;
+let tokenID, creatorPercentage = 50;
 
 let nftArr = [];
 
-describe('Test: NFT Auctions', function() {
+describe.skip('Test: NFT Auctions', function() {
     describe('Buyer and Token', function() {
         let buyers = [];
 

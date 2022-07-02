@@ -5,11 +5,10 @@
 require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
-console.log(process.env.REPORT_GAS)
 require("hardhat-gas-reporter");
 
 // Tasks
-require('./tasks/deploy');
+require('./tasks');
 
 module.exports = {
     networks: {
@@ -50,7 +49,8 @@ module.exports = {
         disambiguatePaths: false,
     },
     gasReporter: {
-        currency: 'CHF',
+        enabled: (process.env.REPORT_GAS === false) ? false : true,
+        currency: 'USD',
         gasPrice: 21
     },
     settings: {

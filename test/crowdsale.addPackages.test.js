@@ -1,8 +1,6 @@
 const chai = require('chai');
-chai.use(
-    require('chai-as-promised')
-);
 const { expect } = chai;
+const { ethers } = require('hardhat');
 
 let freshToken, wellToken, unitFresh, unitWell,
     FreshTokenContract, WellTokenContract,
@@ -11,14 +9,13 @@ let freshToken, wellToken, unitFresh, unitWell,
 describe('Crowdsale: Add packages', function() {
     let crowdsale, accounts;
     // 1 $WELL = 25 ETH
-    const tokensPerWei = 4;
 
     before(async() => {
         accounts = await ethers.getSigners();
 
-        deployParameters = [[], [], [accounts[1].address]];
+        const deployParameters = [[], [], [accounts[1].address]];
         return Promise.all([
-            WellContract = await ethers.getContractFactory('Well'),
+            WellTokenContract = await ethers.getContractFactory('Well'),
             FreshTokenContract = await ethers.getContractFactory('Fresh'),
             CollectorCrowdsale = await ethers.getContractFactory('CollectorCrowdsale')
         ])

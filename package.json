@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run abi && . ./.env.local && npx hardhat run --network development scripts/local-deploy.js",
+    "dev": "npm run abi && . ./.env.local && npx hardhat deploy-local --network development",
     "dev:console": ". ./.env.local && npx hardhat console",
-    "lint": "eslint -c ./.eslintrc.js",
+    "lint": "eslint deployScripts tasks -c ./.eslintrc.js",
     "clean": ". ./.env.local && npx hardhat clean",
     "help": ". ./.env.local && npx hardhat help",
     "compile": ". ./.env.local && npx hardhat compile",
@@ -59,10 +59,8 @@
   },
   "nodemonConfig": {
     "ext": "*.js, *.sol",
-    "watch": [
-      "tests/*",
-      "test/*",
-      "contracts/*"
+    "ignore": [
+      "node_modules"
     ]
   }
 }
