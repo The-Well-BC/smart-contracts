@@ -2,10 +2,10 @@
  * @type import('hardhat/config').HardhatUserConfig
  */
 
-require('hardhat-contract-sizer');
+// require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
-require("hardhat-gas-reporter");
+// require("hardhat-gas-reporter");
 
 // Tasks
 require('./tasks');
@@ -48,11 +48,13 @@ module.exports = {
         runOnCompile: true,
         disambiguatePaths: false,
     },
+    /*
     gasReporter: {
         enabled: (process.env.REPORT_GAS === false) ? false : true,
         currency: 'USD',
         gasPrice: 21
     },
+    */
     settings: {
         optimizer: {
             enabled: true,
@@ -68,6 +70,8 @@ module.exports = {
                     runs: 223
                 }
             },
+        }, {
+            version: "0.8.9",
         }, {
             version: "0.4.20"
         }]

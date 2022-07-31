@@ -1,7 +1,7 @@
 const chai = require('chai');
 const { expect } = chai;
 
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 
 const nftDeploy = require('../deployScripts/nft');
 const { ethers } = require('hardhat');

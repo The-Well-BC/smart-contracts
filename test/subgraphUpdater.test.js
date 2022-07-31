@@ -1,7 +1,7 @@
 const chai = require('chai');
 const { expect } = chai;
 const { ethers } = require('hardhat');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 
 describe('Update subgraph', function() {
     let subgraphUpdater;

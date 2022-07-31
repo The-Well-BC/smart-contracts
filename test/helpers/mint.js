@@ -1,5 +1,5 @@
 const deploy = require('../deploy');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 
 async function mintNFT(mintSingle=false) {
     let deployed = await deploy();
