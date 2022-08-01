@@ -1,5 +1,5 @@
 // Imports mock contracts
 
-import "../test/mocks/MockERC20.sol";
-import "../test/mocks/MockContract.sol";
-import "../test/mocks/MockMarketplace.sol";
+import "../tests/mocks/MockERC20.sol";
+import "../tests/mocks/MockContract.sol";
+import "../tests/mocks/MockMarketplace.sol";

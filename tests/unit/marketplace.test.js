@@ -176,18 +176,17 @@ describe.only('Marketplace unit tests', function() {
 
         it('EndAuction should fail if called before auction time is up', function() {
             let endDate = new Date();
-            endDate = endDate.setDate(new Date().getDate() + 7);
-            endDate = endDate.getTime();
+            endDate = parseInt(endDate.setDate(new Date().getDate() + 7) / 1000);
 
             const nftAddr = mockNFT.address;
-            const auctionCreator = accounts[5], tokenID= 8;
-            const bidder = accounts[7];
-            const auction = {nft: faker.finance.ethereumAddress(), tokenID:8, creator: accounts[5].address, currency:addr0};
+            const auctionCreator = accounts[5];
+            const auction = {nft: faker.finance.ethereumAddress(), tokenID:8, creator: accounts[5].address, currency:addr0, endDate};
+            console.log('auction:', auction);
 
             // const bid = createBid(auction1, initBid, currency, bidder.address);
 
             return marketplace._setActiveAuction( createAuctionStruct(auction) )
-            .then(() => expect(marketplace.endAuction( auction.nft, auction.tokenID)).to.be.revertedWith('CannotEndAuctionYet()'))
+            .then(() => expect(marketplace.endAuction( auction.nft, auction.tokenID)).to.be.revertedWith(`AuctionNotExpired(${ endDate })`))
         });
 
         it('EndAuction should remove auction from activeAuctions mapping', function() {
