@@ -20,7 +20,9 @@ interface IMarketplace {
         NFT nft;
         address creator;
         Currency currency;
-        uint endDate;
+        uint256 endDate;
+        uint256 reservePrice;
+        uint256 reserveDuration;
     }
 
     struct Bid {
@@ -44,7 +46,7 @@ interface IMarketplace {
 
     function createAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress) external;
 
-    function createReserveAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress) external;
+    function createReserveAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress, uint256 reservePrice, uint256 reserveDuration) external;
 
     function endAuction(IERC721 nftAddress, uint256 tokenID) external;
 

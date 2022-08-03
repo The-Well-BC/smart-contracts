@@ -1,3 +1,4 @@
+const ethers = require('ethers');
 const deploy = require('../deploy');
 const { faker } = require('@faker-js/faker');
 
@@ -107,7 +108,15 @@ function listNFTs(mintSingle='multiple') {
         });
 }
 
-function sellNFTs() {
+async function sellNFTs() {
+    let deployed = await deploy();
+
+    const { accounts,
+        marketplace: TheWellMarketplace,
+        nft: TheWellNFT,
+        weth:goodToken, fresh:badToken
+    } = deployed;
+
     // let nftArr, TheWellMarketplace, TheWellNFT, goodToken, badToken, buyers;
 
     return listNFTs()

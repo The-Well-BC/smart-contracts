@@ -20,7 +20,6 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
     address _admin;
 
     mapping (IERC721 => mapping(uint256 => Auction[])) public auctions;
-
     mapping (IERC721 => mapping(uint256 => Auction)) public activeAuction;
 
     mapping (IERC721 => mapping(uint256 => Bid)) public activeBids;
@@ -28,7 +27,7 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
     error BidTooLow(uint256 activeBidAmount, uint256 newBidAmount);
     error UintDebugger(uint val);
     error AddressDebugger(address val);
-    error CannotEndAuctionYet();
+    error AuctionNotExpired(uint endDate);
 
     constructor(address admin) {
         _admin = admin;
@@ -38,7 +37,7 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
         return auctions[nftAddress][tokenID];
     }
 
-    function createAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress) public override {
+    function _createAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress, uint256 reservePrice, uint256 reserveDuration) private {
         address owner_ = msg.sender;
         IERC721 nft = IERC721(nftAddress);
 
@@ -57,27 +56,37 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
             currency._address = currencyAddress;
         }
 
-        uint256 endDate = block.timestamp;
+        uint256 endDate = block.timestamp + 7 days;
 
-        Auction memory newAuction = Auction(nftObj, msg.sender, currency, endDate);
+        Auction memory newAuction = Auction(nftObj, msg.sender, currency, endDate, reservePrice, reserveDuration);
 
-        Auction[] storage nftAuctions = auctions[nftAddress][tokenID];
-        nftAuctions.push(newAuction);
         activeAuction[nftAddress][tokenID] = newAuction;
 
         nft.transferFrom(owner_, address(this), tokenID); 
     }
 
-    function createReserveAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress) external override {
-        createAuction(nftAddress, tokenID, currencyAddress);
+    function createAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress) public override {
+        _createAuction(nftAddress, tokenID, currencyAddress, 0, 0);
+    }
+
+    function createReserveAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress, uint256 reservePrice, uint256 reserveDuration) external override {
+        if(reserveDuration == 0)
+            reserveDuration = 7 days;
+        _createAuction(nftAddress, tokenID, currencyAddress, reservePrice, reserveDuration);
     }
 
     function endAuction(IERC721 nftAddress, uint256 tokenID) external override {
         Auction memory auction = activeAuction[nftAddress][tokenID];
 
         require(auction.creator != address(0), 'WellMarket: Auction not found or inactive');
+        // revert AuctionNotExpired(auction.endDate);
+
         if(block.timestamp < auction.endDate)
-            revert CannotEndAuctionYet();
+            revert AuctionNotExpired(auction.endDate);
+
+        // Add to auctions
+        Auction[] storage nftAuctions = auctions[nftAddress][tokenID];
+        nftAuctions.push(auction);
 
         delete activeAuction[nftAddress][tokenID];
     }
@@ -88,22 +97,21 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
     }
      */
 
-    function _returnLatestBid(IERC721 nftAddress, uint256 tokenID) internal {
-        Bid memory latestBid = activeBids[nftAddress][tokenID];
-        address payable bidder = payable(latestBid.bidder);
+    function _returnBid(Bid memory bid_) internal {
+        address payable bidder = payable(bid_.bidder);
 
         if(bidder != address(0)) {
-            if(latestBid.currency.isEther)
-                bidder.transfer(latestBid.amount);
+            if(bid_.currency.isEther)
+                bidder.transfer(bid_.amount);
             else {
-                IERC20(latestBid.currency._address).transfer(bidder, latestBid.amount);
+                IERC20(bid_.currency._address).transfer(bidder, bid_.amount);
             }
         }
     }
 
    function _bid(IERC721 nftAddress, uint256 tokenID, IERC20 tokenAddress, uint256 bidAmount) internal {
-       Auction memory auction = activeAuction[nftAddress][tokenID];
-       Bid storage activeBid_ = activeBids[nftAddress][tokenID];
+       Auction storage auction = activeAuction[nftAddress][tokenID];
+       Bid memory activeBid_ = activeBids[nftAddress][tokenID];
 
        address bidder = msg.sender;
 
@@ -121,11 +129,16 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
        }
 
        Bid memory newBid = Bid(bidAmount, currency, auction, bidder);
+
+       if(newBid.amount >= auction.reservePrice && activeBid_.amount < auction.reservePrice) {
+           auction.endDate = block.timestamp + auction.reserveDuration;
+       }
+
        activeBids[nftAddress][tokenID] = newBid;
 
        // Return previous active bid to previous bidder.
        if(activeBid_.amount != 0)
-           _returnLatestBid(nftAddress, tokenID);
+           _returnBid(activeBid_);
 
        // Transfer erc20 token in bid to contract.
        if(tokenAddress != IERC20(address(0)))

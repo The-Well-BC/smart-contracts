@@ -7,12 +7,13 @@ const { constants } = require('@openzeppelin/test-helpers');
 
 const { faker } = require('@faker-js/faker');
 
+const { createBidStructFromObject, createBidStruct, createAuctionStruct } = require ('../helpers/structs.js');
 
-describe('Marketplace Integration Tests', function() {
+describe.only('Marketplace Integration Tests', function() {
     const zeroAddr = constants.ZERO_ADDRESS, addr0 = constants.ZERO_ADDRESS,
         zeroAuction = [[zeroAddr, BigNumber.from(0)], zeroAddr];
 
-    let marketplace, nft, erc20, accounts;
+    let mockMarketplace, marketplace, nft, erc20, accounts;
 
     beforeEach(async () => {
         accounts = await hh.ethers.getSigners();
@@ -20,6 +21,10 @@ describe('Marketplace Integration Tests', function() {
         const ERC20 = await hh.ethers.getContractFactory('MockERC20');
         erc20 = await ERC20.deploy();
         await erc20.deployed();
+
+        const MockMarketplace = await hh.ethers.getContractFactory('MockMarketplace')
+        mockMarketplace = await MockMarketplace.deploy();
+        await mockMarketplace.deployed();
 
         const Marketplace = await hh.ethers.getContractFactory('Marketplace')
         marketplace = await Marketplace.deploy(accounts[13].address);
@@ -48,43 +53,49 @@ describe('Marketplace Integration Tests', function() {
         const auctionCreator = accounts[0];
         const tokenID = 1;
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
-            .then(res => nft.ownerOf(tokenID))
+        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID, addr0)
+            .then(() => nft.ownerOf(tokenID))
             .then(res => {
                 expect(res).to.equal(marketplace.address)
-                return marketplace.activeAuctions(nft.address, tokenID)
+                return marketplace.activeAuction(nft.address, tokenID)
             })
-            .then(res => expect(res).to.have.deep.members([[nft.address, BigNumber.from(tokenID)], auctionCreator.address]))
-            .then(() => marketplace.activeAuctions(nft.address, tokenID))
-            .then(() => marketplace.connect(auctionCreator).endAuction(nft.address, tokenID))
+            .then(res => {
+                expect(res.creator).to.equal(auctionCreator.address);
+                expect(res.nft).to.have.property('tokenContract', nft.address);
+                expect(res.nft).to.have.deep.property('tokenID', BigNumber.from(tokenID));
+            })
+            .then(() => marketplace.activeAuction(nft.address, tokenID))
+            // .then(() => marketplace.connect(auctionCreator).endAuction(nft.address, tokenID))
     });
 
     it('CreateAuction() should transfer NFT to marketplace contract', async function() {
         const tokenID = 1;
 
-        return marketplace.createAuction(nft.address, tokenID)
-            .then(res => nft.ownerOf(tokenID))
+        return marketplace.createAuction(nft.address, tokenID, addr0)
+            .then(() => nft.ownerOf(tokenID))
             .then(res => expect(res).to.equal(marketplace.address))
     });
 
-    it('CreateReserveAuction should add auction to auction, and to activeAuctions', function() {
+    it('CreateReserveAuction should add auction to auctions[], and set activeAuction=auction', function() {
         const auctionCreator = accounts[0];
-        const tokenID = 5;
 
-        const auction = [auctionCreator.address, [nft.address, BigNumber.from(tokenID)]];
+        // const auction = [auctionCreator.address, [nft.address, BigNumber.from(tokenID)]];
+        const auction = {creator:auctionCreator.address, nft:nft.address, tokenID:BigNumber.from(5)};
 
-        return marketplace.connect(auctionCreator).createReserveAuction(nft.address, tokenID)
-            .then(res => marketplace.auctions(nft.address, tokenID))
-            .then(res => expect(res).to.have.deep.members(auction))
-            .then(res => marketplace.activeAuctions(nft.address, tokenID))
-            .then(res => expect(res).to.have.deep.members(auction))
+        return marketplace.connect(auctionCreator).createReserveAuction(nft.address, auction.tokenID, addr0, 71, 86400)
+            .then(() => marketplace.activeAuction(auction.nft, auction.tokenID))
+            .then(res => {
+                expect(res).to.have.property('nft');
+                expect(res.nft).to.have.property('tokenContract', auction.nft);
+                expect(res.nft).to.have.deep.property('tokenID', auction.tokenID);
+            });
     });
 
     it('CreateReserveAuction() should transfer NFT to marketplace contract', function() {
         const tokenID = 3;
 
-        return marketplace.createReserveAuction(nft.address, tokenID)
-            .then(res => nft.ownerOf(tokenID))
+        return marketplace.createReserveAuction(nft.address, tokenID, addr0, 71, 86400)
+            .then(() => nft.ownerOf(tokenID))
             .then(res => expect(res).to.equal(marketplace.address))
     });
 
@@ -95,16 +106,15 @@ describe('Marketplace Integration Tests', function() {
         const bidAmount = ethers.utils.parseEther('0.05');
         const erc20Addr = zeroAddr;
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
+        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID, addr0)
             .then(() => marketplace.connect(bidder)['bid(address,uint256)'](nft.address, tokenID, {value: bidAmount}))
             .then(() => marketplace.activeBids(nft.address, tokenID))
             .then(res => {
-                expect(res).to.have.deep.members([
-                    BigNumber.from(bidAmount),
-                    [ true, erc20Addr ],
-                    [ [nft.address, BigNumber.from(tokenID)], auctionCreator.address ],
-                    bidder.address
-                ]);
+                expect(res).to.have.deep.property('amount', BigNumber.from(bidAmount))
+                expect(res).to.have.property('bidder', bidder.address);
+                expect(res).to.have.property('currency');
+                expect(res.currency).to.have.property('isEther', true);
+                expect(res.currency).to.have.property('_address', addr0);
             });
     });
 
@@ -121,7 +131,7 @@ describe('Marketplace Integration Tests', function() {
 
         let bidderBalance = ethers.utils.parseEther('0.2');
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
+        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID, addr0)
             .then(() => ethers.provider.getBalance(previousBidder.address))
             .then(res => previousBidderBalance = res)
             .then(() => marketplace.connect(previousBidder)['bid(address,uint256)'](nft.address, tokenID, {value:previousBid}))
@@ -141,22 +151,23 @@ describe('Marketplace Integration Tests', function() {
 
     it('Bid in ERC20 should create active bid', function() {
         const auctionCreator = accounts[0];
-        const tokenID = 5;
-        const bidder = accounts[5];
-        const bidAmount = ethers.utils.parseEther('0.05');
         const erc20Addr = erc20.address;
+        const bid = {amount: ethers.utils.parseEther('0.05'),
+            bidder:accounts[5], tokenID: 5, erc20:erc20.address}
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
-            .then(() => erc20.mint(bidder.address, bidAmount))
-            .then(() => marketplace.connect(bidder)['bid(address,uint256,address,uint256)'](nft.address, tokenID, erc20Addr, bidAmount))
-            .then(() => marketplace.activeBids(nft.address, tokenID))
+        console.log('marketplace address:', marketplace.address, '\nbidder address:', bid.bidder.address);
+        return marketplace.connect(auctionCreator).createAuction(nft.address, bid.tokenID, bid.erc20)
+            .then(() => erc20.mint(bid.bidder.address, bid.amount))
+            .then(() => erc20.balanceOf(bid.bidder.address))
+            .then(res => console.log('ers:', res, bid.amount))
+            .then(() => marketplace.connect(bid.bidder)['bid(address,uint256,address,uint256)'](nft.address, bid.tokenID, bid.erc20, bid.amount))
+            .then(() => marketplace.activeBids(nft.address, bid.tokenID))
             .then(res => {
-                expect(res).to.have.deep.members([
-                    BigNumber.from(bidAmount),
-                    [ false, erc20Addr ],
-                    [ [nft.address, BigNumber.from(tokenID)], auctionCreator.address ],
-                    bidder.address
-                ]);
+                expect(res).to.have.deep.property('amount', BigNumber.from(bid.amount));
+                expect(res).to.have.property('bidder', bid.bidder.address);
+                expect(res).to.have.property('currency');
+                expect(res.currency).to.have.property('isEther', false);
+                expect(res.currency).to.have.property('_address', bid.erc20);
             });
     });
 
@@ -168,7 +179,7 @@ describe('Marketplace Integration Tests', function() {
         const erc20Addr = erc20.address;
         let bidderBalance = ethers.utils.parseEther('0.2');
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
+        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID, erc20Addr)
             .then(() => erc20.mint(bidder.address, bidderBalance))
             .then(() => marketplace.connect(bidder)['bid(address,uint256,address,uint256)'](nft.address, tokenID, erc20Addr, bidAmount))
             .then(() => Promise.all([erc20.balanceOf(bidder.address), erc20.balanceOf(marketplace.address)]))
@@ -180,28 +191,29 @@ describe('Marketplace Integration Tests', function() {
 
     it('Bid in ERC20: Return previous bidder their bid', function() {
         const auctionCreator = accounts[0];
-        const tokenID = 5;
+        const auction = {
+            nftAddress: nft.address, tokenID: 5,
+            erc20: erc20.address,
+        }
 
         const previousBidder = accounts[4];
         const previousBidderBalance = ethers.utils.parseEther('0.1');
-        const previousBid = {address:erc20.address, amount:ethers.utils.parseEther('0.02')};
+        const previousBid = {address:auction.erc20, amount:ethers.utils.parseEther('0.08')};
 
         const currentBidder = accounts[5]
         const currentBidderBalance = BigNumber.from(ethers.utils.parseEther('0.1'));
-        const currentBid = {address:erc20.address, amount:ethers.utils.parseEther('0.05')};
+        const currentBid = {address:auction.erc20, amount:ethers.utils.parseEther('0.09')};
 
         let bidderBalance = ethers.utils.parseEther('0.2');
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
+        return marketplace.connect(auctionCreator).createAuction(auction.nftAddress, auction.tokenID, auction.erc20)
             .then(() => erc20.mint(previousBidder.address, previousBidderBalance))
             .then(() => erc20.mint(currentBidder.address, currentBidderBalance))
-            .then(() => marketplace.connect(previousBidder)['bid(address,uint256,address,uint256)'](nft.address, tokenID, previousBid.address, previousBid.amount))
-            .then(() => marketplace.connect(currentBidder)['bid(address,uint256,address,uint256)'](nft.address, tokenID, currentBid.address, currentBid.amount))
-            .then(() => Promise.all([erc20.balanceOf(previousBidder.address), erc20.balanceOf(currentBidder.address), erc20.balanceOf(marketplace.address)]))
+            .then(() => marketplace.connect(previousBidder)['bid(address,uint256,address,uint256)'](nft.address, auction.tokenID, previousBid.address, previousBid.amount))
+            .then(() => marketplace.connect(currentBidder)['bid(address,uint256,address,uint256)'](nft.address, auction.tokenID, currentBid.address, currentBid.amount))
+            .then(() => Promise.all([erc20.balanceOf(previousBidder.address), erc20.balanceOf(marketplace.address)]))
             .then(res => {
                 expect(res[0], 'Prevous bidder balance').to.equal(previousBidderBalance); // previous bidder balance
-                expect(res[1], 'Current bidder balance').to.equal(currentBidderBalance.sub(currentBid.amount)); // current bidder balance
-                expect(res[2], 'Marketplace balance').to.equal(currentBid.amount); // marketplace balance
             });
     });
 
@@ -211,7 +223,7 @@ describe('Marketplace Integration Tests', function() {
         const bidder = accounts[5];
         const bidAmount = ethers.utils.parseEther('0.05');
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
+        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID, addr0)
             .then(() => {
                 return expect(marketplace.connect(bidder)['bid(address,uint256,address,uint256)'](nft.address, tokenID, zeroAddr,  bidAmount))
                     .to.be.reverted;
@@ -225,11 +237,102 @@ describe('Marketplace Integration Tests', function() {
         const erc20Addr = erc20.address;
         const bidAmount = ethers.utils.parseEther('0');
 
-        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID)
+        return marketplace.connect(auctionCreator).createAuction(nft.address, tokenID, addr0)
             .then(() => {
                 return expect(marketplace.connect(bidder)['bid(address,uint256,address,uint256)'](nft.address, tokenID, erc20Addr,  bidAmount))
                     .to.be.reverted;
             })
+    });
+
+    describe('Bid on reserve auction', function() {
+        it('Bids under reserve price should not extend auction', function() {
+            const now = new Date();
+            let threeDays = new Date().setDate(now.getDate() + 3);
+
+            const bidder = accounts[7];
+            const auctionCreator = accounts[0], notAuctionCreator = accounts[3];
+            const auction = {nft:nft.address, tokenID:6,
+                creator:auctionCreator.address, currency:addr0,
+                endDate: BigNumber.from(parseInt(threeDays/1000)),
+                reservePrice:BigNumber.from(ethers.utils.parseEther('0.5')),
+                reserveDuration:86400 * 12};
+
+            return mockMarketplace._setActiveAuction( createAuctionStruct(auction) )
+                .then(() => mockMarketplace.connect(bidder)['bid(address,uint256)'](auction.nft, auction.tokenID, {value:auction.reservePrice.sub(122)}))
+                .then(() => mockMarketplace.activeAuction(auction.nft, auction.tokenID))
+                .then(res => {
+                    expect(res.endDate).to.equal(auction.endDate);
+                });
+        });
+
+        it('Bid at reserve price should extend auction by reserve duration', function() {
+            const now = new Date();
+            let threeDays = new Date().setDate(now.getDate() + 3);
+            let newEndDate = BigNumber.from(parseInt(new Date().setDate(now.getDate() + 12) / 1000));
+
+            const bidder = accounts[7];
+            const auctionCreator = accounts[0], notAuctionCreator = accounts[3];
+            const auction = {nft:nft.address, tokenID:6,
+                creator:auctionCreator.address, currency:addr0,
+                endDate: BigNumber.from(parseInt(threeDays/1000)),
+                reservePrice:ethers.utils.parseEther('0.5'),
+                reserveDuration: 86400 * 12};
+
+            return mockMarketplace._setActiveAuction( createAuctionStruct(auction) )
+                .then(() => mockMarketplace.connect(bidder)['bid(address,uint256)'](auction.nft, auction.tokenID, {value:auction.reservePrice}))
+            // .then(() => time.increaseTo(fourDays))
+                .then(() => mockMarketplace.activeAuction(auction.nft, auction.tokenID))
+                .then(res => {
+                    expect(res.endDate).to.be.closeTo(newEndDate, 600);
+                });
+        });
+
+        it('Bid above reserve price should extend auction by reserve duration', function() {
+            const now = new Date();
+            let threeDays = new Date().setDate(now.getDate() + 3);
+            let newEndDate = BigNumber.from(parseInt(new Date().setDate(now.getDate() + 12) / 1000));
+
+            // newEndDate = BigNumber.from(newEndDate/1000);
+
+            const bidder = accounts[7];
+            const auctionCreator = accounts[0], notAuctionCreator = accounts[3];
+            const auction = {nft:nft.address, tokenID:6,
+                creator:auctionCreator.address, currency:addr0,
+                endDate: BigNumber.from(parseInt(threeDays/1000)),
+                reservePrice:BigNumber.from(ethers.utils.parseEther('0.5')),
+                reserveDuration:86400 * 12};
+
+            return mockMarketplace._setActiveAuction( createAuctionStruct(auction) )
+                .then(() => mockMarketplace.connect(bidder)['bid(address,uint256)'](auction.nft, auction.tokenID, {value:auction.reservePrice.add(230000)}))
+                .then(() => mockMarketplace.activeAuction(auction.nft, auction.tokenID))
+                .then(res => {
+                    expect(res.endDate).to.be.closeTo(newEndDate, 600);
+                });
+        });
+
+        it('Subsequent bids above reserve price should not extend auction', function() {
+            const now = new Date();
+            let threeDays = new Date().setDate(now.getDate() + 3);
+
+            const bidder = accounts[7];
+            const auctionCreator = accounts[0], notAuctionCreator = accounts[3];
+            const auction = {nft:nft.address, tokenID:6,
+                creator:auctionCreator.address, currency:addr0,
+                endDate: BigNumber.from(parseInt(threeDays/1000)),
+                reservePrice:ethers.utils.parseEther('0.5'),
+                reserveDuration:86400 * 12};
+
+            const activeBid = {amount: BigNumber.from(auction.reservePrice).add(5), auction};
+
+            return mockMarketplace._setActiveAuction( createAuctionStruct(auction) )
+                .then(() => mockMarketplace._setActiveBid( createBidStruct(activeBid) ))
+                .then(() => mockMarketplace.connect(bidder)['bid(address,uint256)'](auction.nft, auction.tokenID, {value:activeBid.amount.add(122)}))
+            // .then(() => time.increaseTo(fourDays))
+                .then(() => mockMarketplace.activeAuction(auction.nft, auction.tokenID))
+                .then(res => {
+                    expect(res.endDate).to.equal(auction.endDate);
+                });
+        });
     });
 
     it('View NFT history: sales and auctions');
