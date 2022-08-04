@@ -19,7 +19,6 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
     using SafeERC20 for IERC20;
     address _admin;
 
-    mapping (IERC721 => mapping(uint256 => Auction[])) public auctions;
     mapping (IERC721 => mapping(uint256 => Auction)) public activeAuction;
 
     mapping (IERC721 => mapping(uint256 => Bid)) public activeBids;
@@ -31,10 +30,6 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
 
     constructor(address admin) {
         _admin = admin;
-    }
-
-    function getAuctions(IERC721 nftAddress, uint256 tokenID) external view returns(Auction[] memory) {
-        return auctions[nftAddress][tokenID];
     }
 
     function _createAuction(IERC721 nftAddress, uint256 tokenID, IERC20 currencyAddress, uint256 reservePrice, uint256 reserveDuration) private {
@@ -83,10 +78,6 @@ contract Marketplace is IMarketplace, ReentrancyGuard{
 
         if(block.timestamp < auction.endDate)
             revert AuctionNotExpired(auction.endDate);
-
-        // Add to auctions
-        Auction[] storage nftAuctions = auctions[nftAddress][tokenID];
-        nftAuctions.push(auction);
 
         delete activeAuction[nftAddress][tokenID];
     }
